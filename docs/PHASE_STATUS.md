@@ -49,3 +49,6 @@ New `sqlserver` and `oracle` engines use Microsoft go-mssqldb v1.8.2 (Go 1.23-co
 
 ## MongoDB read-only milestone
 Implemented standalone MongoDB Go v1 driver (v1.17.6), schema/collection browsing, bounded Extended JSON document pagination and optional scalar equality filters. The API blocks operators, aggregations, mutations and SQL endpoint misuse. TLS verification is mandatory remotely, with opt-in loopback-only plaintext for disposable local CI. Browser UI and local MCP stdio read tools added. Go CI provisions a MongoDB 7.0 service and runs an explicit live `TestMongoLiveReadonly`. Atlas/replica set, writes, import/export, change streams and MongoDB backup/restore remain out of scope. See [MongoDB integration](MONGODB.md).
+
+## Consent-gated AI SQL review
+Opt-in external OpenAI Responses API review added. SQL single-statement checks and string-literal redaction precede outbound requests; no rows/credentials forwarded, no SQL execution, and no generated query can be applied automatically. Mock HTTP tests are in CI. Requires a live API key and schema-sharing approval for production validation. See [AI review](AI_REVIEW.md).

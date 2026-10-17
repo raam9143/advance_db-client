@@ -30,3 +30,5 @@
 .redis-result{margin-top:1rem;padding:1rem;background:rgba(127,127,127,.08);border-radius:8px}
 .redis-result pre{white-space:pre-wrap;word-break:break-word;max-height:400px;overflow:auto;font-size:.85rem}
 .redis-engine-hidden{display:none!important}
+
+.ai-advice-panel{padding:1rem 1.25rem;margin:.8rem 0}.ai-advice-panel pre{white-space:pre-wrap;word-break:break-word;font-size:.85rem;line-height:1.5;padding:.75rem;background:rgba(127,127,127,.07);max-height:500px;overflow:auto}

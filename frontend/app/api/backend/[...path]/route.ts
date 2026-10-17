@@ -9,7 +9,8 @@ async function proxy(req:Request, {params}:{params:Promise<{path:string[]}>}):Pr
  if (req.method!=='GET' && !sameOrigin(req)) return reply('Invalid origin',403);
  const segments=(await params).path;
  const path='/'+segments.join('/');
- const allowed=path==='/v1/schema/diff' && req.method==='POST'
+ const allowed=path==='/v1/ai/review' && req.method==='POST'
+  || path==='/v1/schema/diff' && req.method==='POST'
   || path==='/v1/capabilities' && req.method==='GET'
   || path==='/v1/connections' && ['GET','POST'].includes(req.method)
   || /^\/v1\/backups\/[a-f0-9]{48}$/.test(path)&&['GET','DELETE'].includes(req.method)
