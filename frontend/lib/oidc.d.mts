@@ -1,0 +1,10 @@
+export type OidcConfig={issuer:string;id:string;secret?:string;redirect:string;adminGroup:string;viewerGroup:string;sessionKey:string};
+export type OidcFlow={state:string;nonce:string;verifier:string;created:number};
+export function oidcConfig(env?:NodeJS.ProcessEnv):OidcConfig;
+export function beginFlow(config:OidcConfig,now?:number):{flow:OidcFlow;cookie:string};
+export function verifyFlow(config:OidcConfig,cookie:string|undefined,state:string|null,now?:number):OidcFlow;
+export function discovery(config:OidcConfig):Promise<Record<string,string>>;
+export function authorizeURL(config:OidcConfig,doc:Record<string,string>,flow:OidcFlow):string;
+export function exchangeCode(config:OidcConfig,doc:Record<string,string>,code:string,flow:OidcFlow):Promise<string>;
+export function checkIDToken(jwt:string,config:OidcConfig,nonce:string,jwks:any,now?:number):{role:'admin'|'viewer';principal:string};
+export function validateIdentity(config:OidcConfig,doc:Record<string,string>,idToken:string,flow:OidcFlow):Promise<{role:'admin'|'viewer';principal:string}>;
