@@ -21,6 +21,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+ "github.com/raam9143/advance_db-client/backend/internal/redisclient"
 )
 
 const (
@@ -52,6 +53,7 @@ type session struct {
 	info   PublicConnection
 	owner  string
 	db     *sql.DB
+ redis *redisclient.Client
 	expiry time.Time
 }
 type Server struct {
@@ -104,7 +106,15 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			s.disconnect(w, parts[0], requestOwner(r))
 			return
 		}
-		if len(parts) == 2 && r.Method == "GET" && parts[1] == "schema" {
+		if len(parts) == 2 && r.Method=="POST" && parts[1]=="redis" {
+   s.inspectRedis(w,r,parts[0]);return
+  }
+  if len(parts)==2 {
+   if c,found:=s.lookup(parts[0],requestOwner(r));found&&c.info.Engine=="redis"&&parts[1]!="schema"{
+    fail(w,400,"Redis requires the read-only inspector endpoint");return
+   }
+  }
+  if len(parts) == 2 && r.Method == "GET" && parts[1] == "schema" {
 			s.schema(w, r, parts[0])
 			return
 		}
@@ -131,8 +141,8 @@ func (s *Server) cleanup() {
 	defer s.mu.Unlock()
 	for id, c := range s.dbs {
 		if s.now().After(c.expiry) {
-			c.db.Close()
-			delete(s.dbs, id)
+			if c.db!=nil{_ = c.db.Close()}
+   delete(s.dbs, id)
 		}
 	}
 }
@@ -165,7 +175,8 @@ func (s *Server) connect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	c.Engine = strings.ToLower(strings.TrimSpace(c.Engine))
-	driver, dsn, err := ConfigDSN(c)
+ if c.Engine=="redis"{s.connectRedis(w,r,c);return}
+ driver, dsn, err := ConfigDSN(c)
 	if err != nil {
 		fail(w, 400, err.Error())
 		return
@@ -220,7 +231,7 @@ func (s *Server) disconnect(w http.ResponseWriter, id string, owner string) {
 		fail(w, 404, "connection not found")
 		return
 	}
-	c.db.Close()
+	if c.db!=nil{_ = c.db.Close()}
 	w.WriteHeader(204)
 }
 func (s *Server) lookup(id, owner string) (*session, bool) {
@@ -239,7 +250,8 @@ func (s *Server) schema(w http.ResponseWriter, r *http.Request, id string) {
 		fail(w, 404, "connection not found")
 		return
 	}
-	q, err := schemaSQL(c.info.Engine)
+	if c.info.Engine=="redis"{respond(w,200,[]map[string]string{});return}
+ q, err := schemaSQL(c.info.Engine)
 	if err != nil {
 		fail(w, 400, err.Error())
 		return
@@ -288,7 +300,8 @@ type QueryResult struct {
 
 func (s *Server) run(ctx context.Context, c *session, q QueryRequest) (QueryResult, error) {
 	var out QueryResult
-	out.Columns = []string{}
+ if c.db==nil{return out,errors.New("SQL is not supported by this connection")}
+ out.Columns = []string{}
 	out.Rows = [][]any{}
 	if strings.TrimSpace(q.SQL) == "" || len(q.SQL) > 100000 {
 		return out, errors.New("SQL is required and must be under 100KB")
