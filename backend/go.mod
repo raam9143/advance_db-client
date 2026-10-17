@@ -7,6 +7,7 @@ require (
 	github.com/jackc/pgx/v5 v5.7.2
 	github.com/microsoft/go-mssqldb v1.8.2
 	github.com/sijms/go-ora/v2 v2.9.0
+	go.mongodb.org/mongo-driver v1.17.6
 	modernc.org/sqlite v1.33.1
 )
 

@@ -22,6 +22,7 @@ import (
 	"sync"
 	"time"
  "github.com/raam9143/advance_db-client/backend/internal/redisclient"
+ "github.com/raam9143/advance_db-client/backend/internal/mongoinspect"
  go_ora "github.com/sijms/go-ora/v2"
 )
 
@@ -56,6 +57,7 @@ type session struct {
 	owner  string
 	db     *sql.DB
  redis *redisclient.Client
+ mongo *mongoinspect.Client
 	expiry time.Time
 }
 type Server struct {
@@ -114,12 +116,16 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if len(parts)==2 && r.Method=="POST" && parts[1]=="backup" {
     s.createBackup(w,r,parts[0]);return
   }
+  if len(parts)==3 && r.Method=="POST" && parts[1]=="mongo" && parts[2]=="find" {
+   s.findMongo(w,r,parts[0]);return
+  }
   if len(parts) == 2 && r.Method=="POST" && parts[1]=="redis" {
    s.inspectRedis(w,r,parts[0]);return
   }
   if len(parts)==2 {
-   if c,found:=s.lookup(parts[0],requestOwner(r));found&&c.info.Engine=="redis"&&parts[1]!="schema"{
-    fail(w,400,"Redis requires the read-only inspector endpoint");return
+   if c,found:=s.lookup(parts[0],requestOwner(r));found {
+     if c.info.Engine=="redis"&&parts[1]!="schema"{fail(w,400,"Redis requires the read-only inspector endpoint");return}
+     if c.info.Engine=="mongo"&&parts[1]!="schema"{fail(w,400,"MongoDB requires the read-only document endpoint");return}
    }
   }
   if len(parts) == 2 && r.Method == "GET" && parts[1] == "schema" {
@@ -153,6 +159,7 @@ func (s *Server) cleanup() {
  for id, c := range s.dbs {
   if s.now().After(c.expiry) {
 			if c.db!=nil{_ = c.db.Close()}
+   if c.mongo!=nil{c.mongo.Close()}
    delete(s.dbs, id)
 		}
 	}
@@ -187,6 +194,7 @@ func (s *Server) connect(w http.ResponseWriter, r *http.Request) {
 	}
 	c.Engine = strings.ToLower(strings.TrimSpace(c.Engine))
  if c.Engine=="redis"{s.connectRedis(w,r,c);return}
+ if c.Engine=="mongo"{s.connectMongo(w,r,c);return}
  driver, dsn, err := ConfigDSN(c)
 	if err != nil {
 		fail(w, 400, err.Error())
@@ -243,7 +251,8 @@ func (s *Server) disconnect(w http.ResponseWriter, id string, owner string) {
 		return
 	}
 	if c.db!=nil{_ = c.db.Close()}
-	w.WriteHeader(204)
+ if c.mongo!=nil{c.mongo.Close()}
+ w.WriteHeader(204)
 }
 func (s *Server) lookup(id, owner string) (*session, bool) {
 	s.mu.Lock()
@@ -262,6 +271,7 @@ func (s *Server) schema(w http.ResponseWriter, r *http.Request, id string) {
 		return
 	}
 	if c.info.Engine=="redis"{respond(w,200,[]map[string]string{});return}
+ if c.info.Engine=="mongo"{s.mongoCollections(w,r,c);return}
  q, err := schemaSQL(c.info.Engine)
 	if err != nil {
 		fail(w, 400, err.Error())
