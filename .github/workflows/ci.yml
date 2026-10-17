@@ -88,7 +88,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node --test mcp/server.test.mjs
+      - run: node --test mcp/server.test.mjs frontend/lib/totp.test.mjs
 
   clickhouse-http:
     runs-on: ubuntu-latest

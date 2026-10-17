@@ -25,3 +25,6 @@ This is a **developer-grade migration starter**, not audited enterprise database
 ## Missing for production
 
 MFA, OAuth/OIDC, RBAC, auditable per-user actions, password hashing with persistent user accounts, revocation registry, secrets vault integration, distributed login throttling, TLS termination automation, network policy, stronger SQL parsing and write approval, driver/version integration tests, policy and vulnerability scanning. All require implementation and audit before enterprise rollout.
+
+## Optional single-admin TOTP authenticator
+Set `APP_REQUIRE_TOTP=true` and `APP_TOTP_SECRET` to a securely generated Base32 secret decoding to at least 20 bytes. Enroll that secret into an authenticator app through an out-of-band administrative process (never commit it, log it, or share it through URLs). Login requires both the existing password and a 6-digit RFC 6238 SHA-1 code, allowing a ±30-second clock skew. Codes cannot be reused within the same running Node process. CI verifies RFC vectors, replay denial and invalid-secret handling. **This is single-instance only:** the replay ledger and login limiter are not distributed or durable. It does not provide individual users, OIDC/SSO, WebAuthn, recovery codes, or device enrollment, and should not be treated as enterprise MFA.
