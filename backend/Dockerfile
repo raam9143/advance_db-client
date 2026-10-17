@@ -1,7 +1,7 @@
 FROM golang:1.26.9-bookworm AS build
 WORKDIR /src
-COPY go.mod ./
-RUN go mod download
+COPY go.mod go.sum ./
+RUN go mod download && go mod verify
 COPY . .
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/api ./cmd/api
 FROM gcr.io/distroless/static-debian12:nonroot

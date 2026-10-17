@@ -1,0 +1,57 @@
+name: reproducible-release-candidate
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.9'
+          cache: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify Go module integrity and build Linux targets
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cd backend
+          go mod download
+          go mod verify
+          go mod tidy -diff
+          go test ./...
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -buildvcs=true -o ../dist/adb-api-linux-amd64 ./cmd/api
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -buildvcs=true -o ../dist/adb-api-linux-arm64 ./cmd/api
+      - name: Build dependency-locked frontend
+        working-directory: frontend
+        run: |
+          npm ci --no-audit --no-fund
+          npm audit --omit=dev --audit-level=high
+          npm run typecheck
+          npm run build
+      - name: Package standalone frontend
+        run: |
+          tar -czf dist/adb-frontend-standalone.tar.gz -C frontend .next/standalone .next/static package-lock.json
+          (cd dist && sha256sum adb-api-linux-amd64 adb-api-linux-arm64 adb-frontend-standalone.tar.gz > SHA256SUMS)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: advance-db-release-candidate
+          path: dist/
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/attest-build-provenance@v3
+        with:
+          subject-path: |
+            dist/adb-api-linux-amd64
+            dist/adb-api-linux-arm64
+            dist/adb-frontend-standalone.tar.gz

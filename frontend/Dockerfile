@@ -5,9 +5,12 @@ RUN npm ci --no-audit --no-fund
 COPY . .
 RUN npm run build
 FROM node:22-alpine
+RUN addgroup -g 1001 -S nodeapp && adduser -u 1001 -S nodeapp -G nodeapp
 WORKDIR /app
 ENV NODE_ENV=production
-COPY --from=build /app/.next/standalone ./
-COPY --from=build /app/.next/static ./.next/static
+ENV HOSTNAME=0.0.0.0
+COPY --from=build --chown=nodeapp:nodeapp /app/.next/standalone ./
+COPY --from=build --chown=nodeapp:nodeapp /app/.next/static ./.next/static
+USER nodeapp
 EXPOSE 3000
 CMD ["node","server.js"]
