@@ -42,3 +42,7 @@ The web SQL editor now supports a Cancel query button. The browser abort signal 
 
 ## SQL Server and Oracle (TCPS) adapters — under validation
 New `sqlserver` and `oracle` engines use Microsoft go-mssqldb v1.8.2 (Go 1.23-compatible) and go-ora/v2 v2.9.0 (pure Go; no Instant Client). Both enforce encrypted, verified TLS connection strings by default and support table enumeration, column/primary-key/index metadata, dialect-specific paging, and scalar bind parameters. Oracle supports service name or SID (via `serviceMode`). SQL Server and Oracle EXPLAIN is deliberately unavailable until a vetted, engine-specific implementation exists. Read-only checks must be enforced by restricted database logins; driver-specific read-only transactions may not be supported. No Oracle/SQL Server live database compatibility test has been run yet.
+
+## SQL Server and Oracle implementation evidence
+- SQL Server driver code, TLS-required DSNs, metadata and pagination plus a disposable SQL Server 2022 CI integration test. The live integration workflow result should be checked before declaring this driver verified.
+- Oracle go-ora/v2 driver, service/SID handling, TCPS certificate enforcement, metadata and 12c+ pagination; compile/parameter tests pass. Real Oracle TCPS test is opt-in and not part of public CI. See [enterprise driver notes](SQLSERVER_ORACLE.md).
