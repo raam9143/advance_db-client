@@ -36,3 +36,6 @@ Verified TLS 1.2+, Basic authentication, readonly=2, bounded JSON responses, nam
 
 ## Opt-in SQLite snapshot download
 An authenticated SQLite connection can create a database snapshot with `POST /v1/connections/{id}/backup` and `{"confirmBackup":true}`. Requires a dedicated absolute, owner-private `SQLITE_BACKUP_DIR` (0700). SQLite `VACUUM INTO` writes the snapshot in a generated private directory. Maximum 128 MiB; ten outstanding snapshots globally; session-isolated IDs expire after 30 minutes. Download with `GET /v1/backups/{id}` and delete with `DELETE /v1/backups/{id}`. **No restore endpoint exists**, and this is not a full disaster-recovery solution. Snapshots are disabled by default.
+
+## Query cancellation
+The web SQL editor now supports a Cancel query button. The browser abort signal is forwarded by the Next.js BFF to the Go API, which already executes SQL within a bounded, cancellable request context. Cancellation is best-effort and vendor/driver-dependent: a database may finish or commit a write before cancellation. This is **not** explicit transaction rollback, and writes require separate confirmation as before.
