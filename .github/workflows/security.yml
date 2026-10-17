@@ -39,7 +39,7 @@ jobs:
         with:
           go-version: '1.26.9'
           cache: false
-      - run: go mod tidy && go mod verify
+      - run: go mod download && go mod verify
       - name: Check reachable Go vulnerabilities
         run: go run golang.org/x/vuln/cmd/govulncheck@v1.1.4 ./...
   sbom:

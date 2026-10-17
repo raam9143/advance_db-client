@@ -57,16 +57,11 @@ jobs:
         with:
           go-version: '1.26.9'
           cache: false
-      - name: Resolve upgraded Go dependencies once for lockfile review
+      - name: Verify pinned Go dependencies
         run: |
-          go mod tidy
+          go mod download
           go mod verify
-          echo ADB_GO_MOD_START
-          cat go.mod
-          echo ADB_GO_MOD_END
-          echo ADB_GO_SUM_START
-          cat go.sum
-          echo ADB_GO_SUM_END
+          go mod tidy -diff
       - run: go test -race ./...
       - name: Explicit MongoDB live read-only integration
         run: go test -race -run TestMongoLiveReadonly -count=1 -v ./integration
@@ -107,7 +102,7 @@ jobs:
         with:
           go-version: '1.26.9'
           cache: false
-      - run: go mod tidy && go mod verify
+      - run: go mod download && go mod verify
       - run: go test -race ./internal/chhttp ./internal/server ./cmd/adbctl
       - run: go vet ./internal/chhttp ./internal/server ./cmd/adbctl
 
@@ -136,6 +131,6 @@ jobs:
         with:
           go-version: '1.26.9'
           cache: false
-      - run: go mod tidy && go mod verify
+      - run: go mod download && go mod verify
       - name: Live Microsoft SQL Server database integration
         run: go test -race -run '^TestSQLServerLive$' -count=1 -v ./integration
