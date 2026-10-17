@@ -64,7 +64,8 @@ jobs:
           go mod tidy -diff
       - run: go test -race ./...
       - name: Explicit MongoDB live read-only integration
-        run: go test -race -run '^TestMongoLiveReadonly
+        run: go test -race -run TestMongoLiveReadonly -count=1 -v ./integration
+      - run: go vet ./...
       - run: go build ./cmd/api
   frontend:
     runs-on: ubuntu-latest
