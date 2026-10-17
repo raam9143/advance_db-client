@@ -3,13 +3,13 @@ package server
 import("strings";"testing")
 func TestCapabilities(t *testing.T){
  got:=Capabilities()
- if len(got)!=7{t.Fatalf("wanted 7, got %d",len(got))}
+ if len(got)!=9{t.Fatalf("wanted 9, got %d",len(got))}
  for _,v:=range got{
   if v.Engine=="redis"{
    if v.Schema||v.Explain||v.Parameters||v.CSVExport||v.JSONExport{t.Fatalf("Redis advertised SQL features: %+v",v)}
    continue
   }
-  if !v.Schema||(v.Engine!="clickhouse"&&!v.Explain)||!v.Parameters||!v.CSVExport||!v.JSONExport{t.Fatalf("incomplete: %+v",v)}
+  if !v.Schema||(v.Engine!="clickhouse"&&v.Engine!="sqlserver"&&v.Engine!="oracle"&&!v.Explain)||!v.Parameters||!v.CSVExport||!v.JSONExport{t.Fatalf("incomplete: %+v",v)}
  }
 }
 func TestValidateParameters(t *testing.T){

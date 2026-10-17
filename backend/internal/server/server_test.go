@@ -47,7 +47,7 @@ func TestConfigDSN(t *testing.T) {
 	}
 	_, _, err = ConfigDSN(ConnectionRequest{Name: "bad", Engine: "oracle"})
 	if err == nil {
-		t.Fatal("oracle should not claim supported")
+		t.Fatal("oracle with missing parameters must fail")
 	}
 }
 func TestForbiddenPath(t *testing.T) {

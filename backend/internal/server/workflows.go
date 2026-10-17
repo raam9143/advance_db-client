@@ -24,6 +24,8 @@ func Capabilities() []EngineCapability {
  {Engine:"sqlite",Protocol:"sqlite",Schema:true,Explain:true,Parameters:true,CSVExport:true,JSONExport:true},
  {Engine:"clickhouse",Protocol:"https",Schema:true,Explain:false,Parameters:true,CSVExport:true,JSONExport:true},
  {Engine:"redis",Protocol:"redis-resp2",Schema:false,Explain:false,Parameters:false,CSVExport:false,JSONExport:false},
+ {Engine:"sqlserver",Protocol:"tds",Schema:true,Explain:false,Parameters:true,CSVExport:true,JSONExport:true},
+ {Engine:"oracle",Protocol:"tcps",Schema:true,Explain:false,Parameters:true,CSVExport:true,JSONExport:true},
  }
 }
 func ValidateParameters(params []any) ([]any,error) {
