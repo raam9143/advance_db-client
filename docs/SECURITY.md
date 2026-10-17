@@ -24,7 +24,14 @@ This is a **developer-grade migration starter**, not audited enterprise database
 
 ## Missing for production
 
-MFA, OAuth/OIDC, RBAC, auditable per-user actions, password hashing with persistent user accounts, revocation registry, secrets vault integration, distributed login throttling, TLS termination automation, network policy, stronger SQL parsing and write approval, driver/version integration tests, policy and vulnerability scanning. All require implementation and audit before enterprise rollout.
+Multi-user/enterprise MFA, OAuth/OIDC, RBAC, centralized audit evidence, password hashing with persistent user accounts, revocation registry, secrets vault integration, distributed login throttling, TLS termination automation, network policy, stronger SQL parsing and write approval, driver/version integration tests, policy and vulnerability scanning. All require implementation and audit before enterprise rollout.
 
 ## Optional single-admin TOTP authenticator
 Set `APP_REQUIRE_TOTP=true` and `APP_TOTP_SECRET` to a securely generated Base32 secret decoding to at least 20 bytes. Enroll that secret into an authenticator app through an out-of-band administrative process (never commit it, log it, or share it through URLs). Login requires both the existing password and a 6-digit RFC 6238 SHA-1 code, allowing a ±30-second clock skew. Codes cannot be reused within the same running Node process. CI verifies RFC vectors, replay denial and invalid-secret handling. **This is single-instance only:** the replay ledger and login limiter are not distributed or durable. It does not provide individual users, OIDC/SSO, WebAuthn, recovery codes, or device enrollment, and should not be treated as enterprise MFA.
+
+## Newly added opt-in controls (not enterprise certification)
+- [SSH tunnel](SSH_TUNNEL.md): public-key authenticated bastion with strict `known_hosts`, bastion/DB allowlists, and loopback-only database end points. PostgreSQL/MySQL protocol only; no unrestricted TCP forwarding.
+- [Audit](PHASE_STATUS.md): `AUDIT_LOG_PATH` and `AUDIT_HMAC_KEY` enable durable local JSONL with keyed integrity chaining. The audit directory must be private (0700). Audits record hashed paths and owners, not SQL or credentials. This is single-process, not truly append-only or cryptographically anchored off-host; external rotation/retention, multi-instance locking, verification during operation and central shipping are not implemented.
+- [Offline restore](SQLITE_RESTORE.md): a maintenance-only SQLite CLI verifies database health and retains the original. All writers must be shut down. It does not restore other database engines.
+- Optional TOTP under `APP_REQUIRE_TOTP=true` and `APP_TOTP_SECRET`. Verify the provisioning and replay counter limitations; production OIDC/SSO/RBAC is still missing.
+- [AI review](AI_REVIEW.md): requests are disabled by default, require user consent, and contain sanitized SQL text only. Table/column identifiers can still reveal organizational structure.

@@ -5,11 +5,16 @@
 A clean-room, incremental migration **foundation** inspired by [DBX](https://github.com/t8y2/dbx), not a finished or feature-equivalent port of DBX. This is a distinct codebase: the original Rust + Tauri backend, Vue desktop application, and 100+ engine integrations have **not** been automatically translated.
 
 ### Current functionality
+- Opt-in SSH-local, pinned-host-key database tunnels for PostgreSQL/MySQL protocols, with bastion/destination allowlists; see [SSH tunnel guide](docs/SSH_TUNNEL.md).
+- Local keyed integrity-chain API audit logging (opt-in, single-process); see [security limitations](docs/SECURITY.md).
+- Offline, operator-run SQLite restoration from validated snapshots with retained originals; see [SQLite restore](docs/SQLITE_RESTORE.md).
+- Opt-in external AI SQL review with explicit consent and literal redaction; advice is non-executable; see [AI review](docs/AI_REVIEW.md).
+
 
 - Go 1.23 `database/sql` API: connect/disconnect to PostgreSQL, MySQL, and SQLite; schema explorer; execute queries; bounded CSV export.
 - Next.js 15 + React 19 + TypeScript frontend with responsive database workspace, SQL editor, schema sidebar, result table and local query history.
 - Node.js server-for-frontend API routes; database credentials and API token remain server-side.
-- Password login with signed, HttpOnly, SameSite session cookie; CSRF Origin checks on mutations and simple login throttling.
+- Single-admin password login with signed, HttpOnly, SameSite cookie; opt-in TOTP authenticator code; CSRF Origin checks and local login throttling. Not enterprise SSO/RBAC.
 - Time-limited in-memory connection handles (2h idle); 30s query time limit, 1,000-row response cap, request-size limits.
 - Conservative SQL detection and driver-level read-only transactions for query statements. **Use database read-only roles for actual enforcement.**
 - Go unit tests for authentication, statement guard, and DSN handling.

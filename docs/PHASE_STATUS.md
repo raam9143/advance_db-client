@@ -2,20 +2,20 @@
 
 This is a web-first rewrite foundation, **not yet a complete port** of t8y2/dbx.
 
-| Phase | Status | Remaining work |
+| Phase | Status | Implemented and remaining |
 | --- | --- | --- |
-| 1 SQL security | In progress | Full SQL parser, per-user RBAC, immutable write audit, encrypted credentials and broader engine/version integration coverage |
-| 2 Database support | In progress | PostgreSQL, MySQL, SQLite baseline; MariaDB/CockroachDB protocol aliases only. ClickHouse read-only HTTPS adapter with protocol mock tests; Oracle, SQL Server, Mongo, Redis and most upstream drivers remain unported |
-| 3 Advanced SQL workspace | In progress | Bind parameters, EXPLAIN, browser-local saved queries implemented. Transactions, multi-tab editing, autocomplete, cancellation and Playwright E2E pending |
-| 4 Data movement | In progress | Bounded CSV/JSON export; streamed import, full backup, restore, migration/diff pending |
-| 5 SSH/AI/MCP/CLI | In progress | SSH tunnels, cloud integrations, AI permissions and plugins; read-only CLI/MCP initial implementations added |
-| 6 Production release | Pending | OIDC/SSO, MFA, account isolation, observability, SBOM, frontend dependency locking, disaster recovery validation |
+| 1 SQL security | In progress | Read-only SQL guards, per-query write confirmation, signed browser namespaces, optional keyed local audit trail. Still missing full dialect-aware SQL parser, per-user RBAC, encrypted persistent credential vault, tamper-proof centralized audit and security review. |
+| 2 Database drivers | In progress | PostgreSQL/MySQL/SQLite live tested; SQL Server 2022, MongoDB 7.0 and Redis 7.4 live tested. ClickHouse protocol tests, Oracle TCPS compile/optional smoke path. MariaDB/Cockroach aliases. Oracle/ClickHouse live compatibility, other upstream engines and enterprise drivers remain pending. |
+| 3 SQL workspace | In progress | Bind parameters, query execution, EXPLAIN for supported engines, browser-local saves, bounded exports, query cancellation. Still missing safe transaction controls, autocomplete, multi-tabs, E2E, charts and large-result virtualization. |
+| 4 Data movement | In progress | Bounded CSV/JSON and MongoDB page exports; SQLite opt-in snapshot + **offline** rollback-preserving restore CLI; schema diff report only. No streamed imports, network-engine full backups/restore, DR/recovery drills, approval pipeline, or DDL migration executor. |
+| 5 Connectivity, AI, MCP | In progress | SSH-local Postgres/MySQL authenticated tunnel with pinned SSH host keys/allowlists, initial read-only MCP/CLI, opt-in/redacting SQL AI review (mock tested). No other protocol tunnel, cloud provider plugins, modern MCP complete parity, production AI evaluation or provider integration acceptance. |
+| 6 Production security and release | In progress | Optional single-admin TOTP, session-scoped connections, local HMAC audit log, restricted tunneling, CI tests. Still missing multi-user OIDC/SSO/RBAC, distributed MFA replay prevention and sessions, durable secret vault, frontend lockfile, release signing/SBOM, HA, penetration tests and rollback drills. |
 
 ## Test evidence
-- **GitHub Actions is green:** [run 39028921850](https://github.com/raam9143/advance_db-client/actions/runs/39028921850) on commit `b2ce844`, after repository visibility changed to public.
-- CI passed all four jobs: Go full `go test -race ./...` with PostgreSQL 16/MySQL 8.4 service containers, `go vet ./...`, `go build ./cmd/api`, frontend typecheck/production build, read-only ClickHouse protocol tests, and Node.js MCP tests.
+- **Latest fully successful baseline:** [run 39054426876](https://github.com/raam9143/advance_db-client/actions/runs/39054426876) after SSH, local audit, SQLite restore, and TOTP JavaScript syntax correction. Later AI review and UI feature pushes must also pass CI before being called verified.
+- CI passed the five-job workflow: Go full `go test -race ./...` with PostgreSQL 16/MySQL 8.4/MongoDB 7.0/Redis 7.4 containers plus separate SQL Server 2022 job, `go vet ./...`, `go build ./cmd/api`, frontend typecheck/production build, read-only ClickHouse protocol tests, and Node.js MCP tests.
 - `backend/go.mod` and `backend/go.sum` are committed, with `go mod verify` and `go mod tidy -diff` enforcing reproducibility.
-- This CI run is not proof of production readiness or successful connectivity to real ClickHouse, Oracle, SQL Server, Redis or MongoDB instances.
+- This CI run is not proof of production readiness or successful connectivity to real ClickHouse or Oracle TCPS instances; Azure/Atlas/replica-set/HA compatibility remains unverified.
 - Previous runner startup failures stopped after the repository became public and jobs were rerun. The precise prior account/runner restriction was not independently established.
 
 ## Important controls
