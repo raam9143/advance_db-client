@@ -71,17 +71,23 @@ type Server struct {
 	now   func() time.Time
  audit *auditLog
  auditError error
+ metrics *apiMetrics
 }
 
 func New(token string) *Server {
 	a,err:=openAuditLog()
- return &Server{token: token, dbs: map[string]*session{}, backups:map[string]*backupSnapshot{},now: time.Now,audit:a,auditError:err}
+ return &Server{token: token, dbs: map[string]*session{}, backups:map[string]*backupSnapshot{},now: time.Now,audit:a,auditError:err,metrics:&apiMetrics{born:time.Now()}}
 }
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+ start:=time.Now()
+ measured:=&metricsResponseWriter{ResponseWriter:w,status:200}
+ defer func(){s.metrics.observe(measured.status,time.Since(start))}()
+ w=measured
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	if r.URL.Path == "/health" && r.Method == "GET" {
-		respond(w, 200, map[string]string{"status": "ok"})
+        if s.auditError!=nil{fail(w,503,"not ready");return}
+        respond(w, 200, map[string]string{"status": "ok"})
 		return
 	}
 	auth := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
@@ -114,6 +120,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case strings.HasPrefix(r.URL.Path,"/v1/backups/")&&(r.Method=="GET"||r.Method=="DELETE"):
         s.backupFile(w,r,strings.TrimPrefix(r.URL.Path,"/v1/backups/"))
+    case r.URL.Path=="/v1/metrics"&&r.Method=="GET":
+        if requestRole(r)!="admin"{fail(w,403,"admin role required");return}
+        respond(w,200,s.metrics.snapshot())
     case r.URL.Path == "/v1/capabilities" && r.Method == "GET":
         respond(w, 200, Capabilities())
     case r.URL.Path=="/v1/ai/review"&&r.Method=="POST":
