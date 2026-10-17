@@ -43,3 +43,20 @@ func TestEnterprisePaging(t *testing.T){
   if engine=="oracle"&&!strings.Contains(stmt,"FETCH NEXT"){t.Fatal("missing Oracle page clause")}
  }
 }
+
+// A SQL Server self-signed development certificate is allowed only on loopback,
+// with a second opt-in server policy; external hosts never bypass validation.
+func TestSQLServerLocalTLSOverride(t *testing.T){
+ t.Setenv("SQLSERVER_ALLOW_UNVERIFIED_LOOPBACK","true")
+ for _,host:=range []string{"db.example.com","192.168.3.14","8.8.8.8"}{
+  _,_,e:=ConfigDSN(ConnectionRequest{Name:"test",Engine:"sqlserver",Host:host,Port:1433,Database:"master",User:"sa",Password:"pw",SSLMode:"local-insecure"})
+  if e==nil{t.Fatalf("remote certificate verification bypassed for %s",host)}
+ }
+ _,dsn,e:=ConfigDSN(ConnectionRequest{Name:"test",Engine:"sqlserver",Host:"127.0.0.1",Port:1433,Database:"master",User:"sa",Password:"pw",SSLMode:"local-insecure"})
+ if e!=nil{t.Fatal(e)}
+ u,e:=url.Parse(dsn)
+ if e!=nil||u.Query().Get("encrypt")!="true"||u.Query().Get("TrustServerCertificate")!="true"{t.Fatal("expected encrypted local-only test connection")}
+ t.Setenv("SQLSERVER_ALLOW_UNVERIFIED_LOOPBACK","false")
+ _,_,e=ConfigDSN(ConnectionRequest{Name:"test",Engine:"sqlserver",Host:"127.0.0.1",Port:1433,Database:"master",User:"sa",Password:"pw",SSLMode:"local-insecure"})
+ if e==nil{t.Fatal("bypass accepted without explicit opt-in")}
+}

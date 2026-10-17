@@ -530,9 +530,10 @@ switch engine {
  case "sqlserver":
   if c.ServiceMode!=""{return "","",errors.New("serviceMode is Oracle-only")}
   mode:=c.SSLMode;if mode==""{mode="verify-full"}
-  if mode!="require"&&mode!="verify-full"{return "","",errors.New("SQL Server requires verified TLS")}
+  localDev:=mode=="local-insecure" && os.Getenv("SQLSERVER_ALLOW_UNVERIFIED_LOOPBACK")=="true" && (strings.EqualFold(c.Host,"localhost")||func()bool{ip:=net.ParseIP(c.Host);return ip!=nil&&ip.IsLoopback()}())
+  if mode!="require"&&mode!="verify-full"&&!localDev{return "","",errors.New("SQL Server requires verified TLS (or explicit local-only test mode)")}
   u:=&url.URL{Scheme:"sqlserver",Host:net.JoinHostPort(c.Host,fmt.Sprint(c.Port)),User:url.UserPassword(c.User,c.Password)}
-  values:=url.Values{};values.Set("database",c.Database);values.Set("encrypt","true");values.Set("TrustServerCertificate","false");values.Set("dial timeout","8")
+  values:=url.Values{};values.Set("database",c.Database);values.Set("encrypt","true");values.Set("TrustServerCertificate",fmt.Sprint(localDev));values.Set("dial timeout","8")
   u.RawQuery=values.Encode()
   return "sqlserver",u.String(),nil
  case "oracle":
