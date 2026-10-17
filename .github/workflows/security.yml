@@ -25,7 +25,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: npm ci --ignore-scripts --no-fund
+      - run: npm install --ignore-scripts --no-fund
       - name: Block high-severity production JavaScript vulnerabilities
         run: npm audit --omit=dev --audit-level=high
   go-vuln:
