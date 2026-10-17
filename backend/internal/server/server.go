@@ -290,7 +290,7 @@ func (s *Server) connect(w http.ResponseWriter, r *http.Request) {
 	if c.Engine=="clickhouse"{c.ReadOnly=true}
     info := PublicConnection{ID: id, Name: c.Name, Engine: c.Engine, Database: c.Database, Host: originalHost, ReadOnly: c.ReadOnly}
 	s.mu.Lock()
-	if len(s.dbs)>=24{s.mu.Unlock();db.Close();if tunnel!=nil{tunnel.Close()};fail(w,429,"connection limit reached");return}
+	if !s.checkQuotaLocked(requestOwner(r)){s.mu.Unlock();db.Close();if tunnel!=nil{tunnel.Close()};fail(w,429,"connection limit reached");return}
   s.dbs[id] = &session{info: info, owner: requestOwner(r), db: db,tunnel:tunnel, expiry: s.now().Add(connectionTTL)}
 	s.mu.Unlock()
 	respond(w, 201, info)
@@ -669,4 +669,12 @@ func ReadOnlySQL(input string) bool {
 		}
 	}
 	return true
+}
+
+// checkQuotaLocked must only be called while holding s.mu.
+func(s *Server)checkQuotaLocked(owner string)bool{
+ if len(s.dbs)>=24{return false}
+ count:=0
+ for _,connection:=range s.dbs{if connection.owner==owner{count++}}
+ return count<6
 }

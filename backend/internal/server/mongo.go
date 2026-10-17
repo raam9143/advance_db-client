@@ -27,7 +27,7 @@ func(s *Server)connectMongo(w http.ResponseWriter,r *http.Request,c ConnectionRe
  id:=hex.EncodeToString(token[:])
  info:=PublicConnection{ID:id,Name:c.Name,Engine:"mongo",Database:c.Database,Host:c.Host,ReadOnly:true}
  s.mu.Lock()
- if len(s.dbs)>=24{s.mu.Unlock();client.Close();fail(w,429,"connection limit reached");return}
+ if !s.checkQuotaLocked(requestOwner(r)){s.mu.Unlock();client.Close();fail(w,429,"connection limit reached");return}
  s.dbs[id]=&session{owner:requestOwner(r),info:info,mongo:client,expiry:s.now().Add(connectionTTL)}
  s.mu.Unlock()
  respond(w,201,info)

@@ -35,7 +35,7 @@ func(s *Server) connectRedis(w http.ResponseWriter,r *http.Request,c ConnectionR
  id:=hex.EncodeToString(random[:])
  info:=PublicConnection{ID:id,Name:c.Name,Engine:"redis",Database:strconv.Itoa(database),Host:c.Host,ReadOnly:true}
  s.mu.Lock()
- if len(s.dbs)>=24{s.mu.Unlock();fail(w,429,"connection limit reached");return}
+ if !s.checkQuotaLocked(requestOwner(r)){s.mu.Unlock();fail(w,429,"connection limit reached");return}
  s.dbs[id]=&session{owner:requestOwner(r),info:info,redis:client,expiry:s.now().Add(connectionTTL)}
  s.mu.Unlock()
  respond(w,201,info)
