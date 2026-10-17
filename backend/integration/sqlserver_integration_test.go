@@ -2,6 +2,7 @@ package integration
 
 import(
  "encoding/json"
+ _ "github.com/microsoft/go-mssqldb"
  "os"
  "strings"
  "testing"
