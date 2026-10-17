@@ -13,3 +13,9 @@
 .inspector-pager{display:flex;justify-content:space-between;align-items:center;gap:6px;padding-top:12px}
 .inspector-pager button{border:1px solid rgba(128,128,128,.3);background:transparent;color:inherit;border-radius:5px;padding:5px;font-size:12px}
 .inspector-pager button:disabled{opacity:.35}
+
+/* Bind parameters and browser-scoped saved SQL */
+.query-parameters{display:flex;gap:.65rem;align-items:center;padding:.55rem 1rem;border-top:1px solid var(--line,#e5e7eb);font-size:.75rem}
+.query-parameters label{flex:0 0 auto;font-weight:600}.query-parameters input{flex:1;min-width:60px;border:1px solid #94a3b8;border-radius:5px;padding:.35rem .55rem;background:transparent;color:inherit;font:inherit}
+.saved-query-list{display:grid;gap:3px;padding:0 12px 10px}.saved-query-list button{padding:.4rem .6rem;border:0;text-align:left;background:transparent;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;border-radius:5px}.saved-query-list button:hover{background:rgba(127,127,127,.15)}
+@media(max-width:700px){.query-parameters{flex-wrap:wrap}.query-parameters label{width:100%}.query-footer .action-row{flex-wrap:wrap}}
