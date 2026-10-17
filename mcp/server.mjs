@@ -9,7 +9,9 @@ const TOOLS=[
 {name:'connections_list',description:'List temporary database connections accessible to this API token',inputSchema:{type:'object',properties:{},additionalProperties:false}},
 {name:'schema_list',description:'List tables in one connection',inputSchema:{type:'object',properties:{connectionId:{type:'string'}},required:['connectionId'],additionalProperties:false}},
 {name:'sql_query_readonly',description:'Execute a read-only SQL query, capped at 1,000 rows',inputSchema:{type:'object',properties:{connectionId:{type:'string'},sql:{type:'string'},parameters:{type:'array',items:{type:['string','number','boolean','null']},maxItems:100}},required:['connectionId','sql'],additionalProperties:false}},
-{name:'sql_explain',description:'Explain a SELECT or WITH query without executing writes',inputSchema:{type:'object',properties:{connectionId:{type:'string'},sql:{type:'string'},parameters:{type:'array',items:{type:['string','number','boolean','null']},maxItems:100}},required:['connectionId','sql'],additionalProperties:false}}
+{name:'sql_explain',description:'Explain a SELECT or WITH query without executing writes',inputSchema:{type:'object',properties:{connectionId:{type:'string'},sql:{type:'string'},parameters:{type:'array',items:{type:['string','number','boolean','null']},maxItems:100}},required:['connectionId','sql'],additionalProperties:false}},
+{name:'mongo_collections_list',description:'Read names of collections in a MongoDB connection',inputSchema:{type:'object',properties:{connectionId:{type:'string'}},required:['connectionId'],additionalProperties:false}},
+{name:'mongo_find_readonly',description:'Read up to 100 MongoDB documents with optional scalar equality match; never accepts aggregation or write operators',inputSchema:{type:'object',properties:{connectionId:{type:'string'},collection:{type:'string'},limit:{type:'integer',minimum:1,maximum:100},offset:{type:'integer',minimum:0,maximum:10000},filterField:{type:'string'},filterValue:{type:['string','number','boolean','null']}},required:['connectionId','collection','limit','offset'],additionalProperties:false}}
 ];
 const error=(id,code,message)=>({jsonrpc:'2.0',id,error:{code,message}});
 const result=(id,value)=>({jsonrpc:'2.0',id,result:value});
@@ -18,6 +20,14 @@ function validateInput(name,args){
  if(!TOOLS.some(x=>x.name===name))throw Error('unknown tool');
  if(!args||typeof args!=='object'||Array.isArray(args))throw Error('invalid arguments');
  if(name!=='connections_list'&&!ID_RE.test(args.connectionId))throw Error('invalid connection ID');
+ if(name==='mongo_find_readonly'){
+  if(typeof args.collection!=='string'||!/^[A-Za-z0-9_][A-Za-z0-9_.-]{0,119}$/.test(args.collection)||args.collection.startsWith('system.')||args.collection.includes('..'))throw Error('invalid MongoDB collection');
+  if(!Number.isInteger(args.limit)||args.limit<1||args.limit>100||!Number.isInteger(args.offset)||args.offset<0||args.offset>10000)throw Error('MongoDB page bounds exceeded');
+  if(args.filterField!==undefined){
+   if(typeof args.filterField!=='string'||!/^[A-Za-z_][A-Za-z0-9_.]{0,119}$/.test(args.filterField)||args.filterField.includes('..')||args.filterField.startsWith('_')&&args.filterField!=='_id')throw Error('invalid MongoDB filter field');
+   if(!Object.prototype.hasOwnProperty.call(args,'filterValue')||args.filterValue!==null&&!['string','number','boolean'].includes(typeof args.filterValue))throw Error('MongoDB scalar filter value required');
+  }else if(Object.prototype.hasOwnProperty.call(args,'filterValue'))throw Error('MongoDB filter field required');
+ }
  if(name.startsWith('sql_')){
   if(typeof args.sql!=='string'||args.sql.length>100000||!/^(SELECT|WITH)\s/i.test(args.sql.trim()))throw Error('tool accepts SELECT or WITH only');
   if(args.sql.includes(';')||args.sql.includes('--')||args.sql.includes('/*'))throw Error('comments and SQL statement separators are disallowed by MCP');
@@ -50,7 +60,11 @@ export async function handle(message,options={}){
     try{
      validateInput(name,args);
      let path='/v1/connections',method='GET',body;
-     if(name==='schema_list')path+=`/${args.connectionId}/schema`;
+     if(name==='schema_list'||name==='mongo_collections_list')path+=`/${args.connectionId}/schema`;
+     if(name==='mongo_find_readonly'){
+      path+=`/${args.connectionId}/mongo/find`;method='POST';
+      body={collection:args.collection,limit:args.limit,offset:args.offset,...(args.filterField?{filterField:args.filterField,filterValue:args.filterValue}:{})};
+     }
      if(name.startsWith('sql_')){
       path+=`/${args.connectionId}/${name==='sql_explain'?'explain':'query'}`;
       method='POST';body={sql:args.sql,parameters:args.parameters||[],timeoutSeconds:15};

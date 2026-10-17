@@ -12,3 +12,6 @@ node --test mcp/server.test.mjs
 Configure the MCP client command to run `node /absolute/path/to/mcp/server.mjs` and set environment variables in the client's trusted configuration (not in source control).
 
 The tools expose temporary connections and allow schema discovery, read-only queries and EXPLAIN only. They do not create connections, execute writes, or manage production credentials. The Go API bearer token can access all in-process connections: keep this MCP bridge local to a trusted user. Restrict database roles to SELECT-only. Avoid submitting secrets in SQL text. 
+
+## MongoDB tools
+The MCP stdio bridge also exposes `mongo_collections_list` and `mongo_find_readonly`. Both require a MongoDB connection ID. The latter accepts a bounded collection/page and optional single-field scalar equality; it cannot send MongoDB aggregation expressions, update operators, or arbitrary BSON documents. MongoDB connections are session-owned and use the same service token namespace as the other CLI tools. See [MongoDB notes](../docs/MONGODB.md).
