@@ -12,7 +12,9 @@ async function proxy(req:Request, {params}:{params:Promise<{path:string[]}>}):Pr
  const allowed=path==='/v1/schema/diff' && req.method==='POST'
   || path==='/v1/capabilities' && req.method==='GET'
   || path==='/v1/connections' && ['GET','POST'].includes(req.method)
-  || /^\/v1\/connections\/[a-f0-9]{48}$/.test(path)&&req.method==='DELETE'
+  || /^\\/v1\\/backups\\/[a-f0-9]{48}$/.test(path)&&['GET','DELETE'].includes(req.method)
+  || /^\\/v1\\/connections\\/[a-f0-9]{48}\\/backup$/.test(path)&&req.method==='POST'
+  || /^/v1/connections/[a-f0-9]{48}$/.test(path)&&req.method==='DELETE'
   || /^\/v1\/connections\/[a-f0-9]{48}\/(schema|describe|table)$/.test(path)&&req.method==='GET'
   || /^\/v1\/connections\/[a-f0-9]{48}\/(query|export|explain|redis)$/.test(path)&&req.method==='POST';
  if (!allowed) return reply('Not found',404);
