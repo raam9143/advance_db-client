@@ -146,3 +146,41 @@ jobs:
       - run: go mod download && go mod verify
       - name: Live Microsoft SQL Server database integration
         run: go test -race -run '^TestSQLServerLive$' -count=1 -v ./integration
+
+  browser-e2e:
+    runs-on: ubuntu-latest
+    env:
+      CI: 'true'
+      API_TOKEN: 'e2e-local-api-token-only'
+      APP_PASSWORD: 'e2e-long-password-for-test-only'
+      APP_SESSION_SECRET: 'e2e-test-only-session-secret-longer-than-thirty-two'
+      GO_API_URL: http://127.0.0.1:8080
+      API_LISTEN: 127.0.0.1:8080
+      OIDC_REQUIRED: 'false'
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.9'
+          cache: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Resolve Playwright lockfile for first E2E integration
+        run: |
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          echo ADB_PLAYWRIGHT_LOCK_BEGIN
+          cat package-lock.json
+          echo ADB_PLAYWRIGHT_LOCK_END
+      - run: npm install --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - run: npm run e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: phase6-browser-failures
+          path: frontend/test-results/
+          if-no-files-found: ignore
