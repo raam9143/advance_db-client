@@ -28,3 +28,6 @@ New login cookies include a random nonce. The Next.js proxy sends HMAC-proven, S
 
 ## Dry-run schema difference
 Authenticated `POST /v1/schema/diff` accepts two table metadata snapshots in `{"before":...,"after":...}` format returned by the `describe` endpoint. It reports deterministic column-level differences with destructive flags and `executable:false`. No SQL is generated or applied. It is not a tested production migration engine.
+
+## ClickHouse read-only HTTPS adapter
+Verified TLS 1.2+, Basic authentication, readonly=2, bounded JSON responses, named ClickHouse parameter placeholders ({p1:String}), table and column browsing. No writes, SQL transactions, native protocol, EXPLAIN, or independently validated live database behavior. Use least-privilege credentials.

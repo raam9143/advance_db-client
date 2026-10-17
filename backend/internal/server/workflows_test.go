@@ -3,8 +3,8 @@ package server
 import("strings";"testing")
 func TestCapabilities(t *testing.T){
  got:=Capabilities()
- if len(got)!=5{t.Fatalf("wanted 5, got %d",len(got))}
- for _,v:=range got{if !v.Schema||!v.Explain||!v.Parameters||!v.CSVExport||!v.JSONExport{t.Fatalf("incomplete: %+v",v)}}
+ if len(got)!=6{t.Fatalf("wanted 6, got %d",len(got))}
+ for _,v:=range got{if !v.Schema||(v.Engine!="clickhouse"&&!v.Explain)||!v.Parameters||!v.CSVExport||!v.JSONExport{t.Fatalf("incomplete: %+v",v)}}
 }
 func TestValidateParameters(t *testing.T){
  v,err:=ValidateParameters([]any{"safe",float64(3),true,nil})

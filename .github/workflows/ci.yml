@@ -67,3 +67,17 @@ jobs:
         with:
           node-version: '22'
       - run: node --test mcp/server.test.mjs
+
+  clickhouse-http:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache: false
+      - run: go test -race ./internal/chhttp ./internal/server ./cmd/adbctl
+      - run: go vet ./internal/chhttp ./internal/server ./cmd/adbctl

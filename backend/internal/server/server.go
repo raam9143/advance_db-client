@@ -175,7 +175,7 @@ func (s *Server) connect(w http.ResponseWriter, r *http.Request) {
 		fail(w, 400, "unable to create driver")
 		return
 	}
-	if c.Engine == "sqlite" {
+	if c.Engine == "sqlite" || c.Engine == "clickhouse" {
 		db.SetMaxOpenConns(1)
 	} else {
 		db.SetMaxOpenConns(3)
@@ -203,7 +203,8 @@ func (s *Server) connect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := hex.EncodeToString(b[:])
-	info := PublicConnection{ID: id, Name: c.Name, Engine: c.Engine, Database: c.Database, Host: c.Host, ReadOnly: c.ReadOnly}
+	if c.Engine=="clickhouse"{c.ReadOnly=true}
+    info := PublicConnection{ID: id, Name: c.Name, Engine: c.Engine, Database: c.Database, Host: c.Host, ReadOnly: c.ReadOnly}
 	s.mu.Lock()
 	if len(s.dbs)>=24{s.mu.Unlock();db.Close();fail(w,429,"connection limit reached");return}
   s.dbs[id] = &session{info: info, owner: requestOwner(r), db: db, expiry: s.now().Add(connectionTTL)}
@@ -435,9 +436,16 @@ func schemaSQL(engine string) (string, error) {
 	switch strings.ToLower(engine) {
 	case "postgres","cockroach":
 		return "SELECT table_schema, table_name FROM information_schema.tables WHERE table_schema NOT IN ('pg_catalog','information_schema') AND table_type='BASE TABLE' ORDER BY 1,2", nil
-	case "mysql","mariadb":
+	case "clickhouse":
+        if c.SSLMode!=""&&c.SSLMode!="require"&&c.SSLMode!="verify-full"{return "","",errors.New("ClickHouse requires verified TLS")}
+        u:=&url.URL{Scheme:"https",Host:net.JoinHostPort(c.Host,fmt.Sprint(c.Port)),Path:"/",User:url.UserPassword(c.User,c.Password)}
+        values:=url.Values{};values.Set("database",c.Database);u.RawQuery=values.Encode()
+        return "adbclickhouse",u.String(),nil
+    case "mysql","mariadb":
 		return "SELECT table_schema, table_name FROM information_schema.tables WHERE table_schema=DATABASE() AND table_type='BASE TABLE' ORDER BY 1,2", nil
-	case "sqlite":
+	case "clickhouse":
+        return "SELECT database,name FROM system.tables WHERE database=currentDatabase() AND is_temporary=0 ORDER BY database,name",nil
+    case "sqlite":
 		return "SELECT 'main', name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name", nil
 	default:
 		return "", errors.New("unsupported engine")
@@ -518,7 +526,7 @@ func ConfigDSN(c ConnectionRequest) (driver, dsn string, err error) {
 		}
 		return "mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s?parseTime=true&tls=%s&timeout=8s&readTimeout=30s&writeTimeout=30s", c.User, c.Password, net.JoinHostPort(c.Host, fmt.Sprint(c.Port)), url.PathEscape(c.Database), tls), nil
 	default:
-		return "", "", errors.New("supported engines: postgres, cockroach, mysql, mariadb, sqlite")
+		return "", "", errors.New("supported engines: postgres, cockroach, mysql, mariadb, sqlite, clickhouse")
 	}
 }
 

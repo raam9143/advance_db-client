@@ -61,6 +61,7 @@ func (s *Server) describe(w http.ResponseWriter,r *http.Request,id string){
  d:=TableDescription{Schema:schema,Name:table,Columns:[]Column{},Indexes:[]Index{}}
  var err error
  switch c.info.Engine{
+ case "clickhouse":err=describeClickHouse(ctx,c.db,schema,table,&d)
  case "sqlite":err=describeSQLite(ctx,c.db,table,&d)
  case "postgres","cockroach":err=describeInformationSchema(ctx,c.db,"postgres",schema,table,&d)
  case "mysql","mariadb":err=describeInformationSchema(ctx,c.db,"mysql",schema,table,&d)
@@ -126,4 +127,16 @@ func describeInformationSchema(ctx context.Context,db *sql.DB,kind,schema,table 
   d.Indexes=append(d.Indexes,Index{Name:name,Column:col,Unique:unique})
  }
  err=ix.Err();ix.Close();return err
+}
+
+func describeClickHouse(ctx context.Context,db *sql.DB,schema,table string,d *TableDescription)error{
+ q:="SELECT name,type,is_in_primary_key,default_expression FROM system.columns WHERE database={db:String} AND table={tab:String} ORDER BY position"
+ rows,err:=db.QueryContext(ctx,q,sql.Named("db",schema),sql.Named("tab",table));if err!=nil{return err}
+ defer rows.Close()
+ for rows.Next(){var name,typ,def string;var primary int64
+  if err:=rows.Scan(&name,&typ,&primary,&def);err!=nil{return err}
+  var v *string;if def!=""{v=&def}
+  d.Columns=append(d.Columns,Column{Name:name,Type:typ,Nullable:strings.HasPrefix(typ,"Nullable("),PrimaryKey:primary>0,Default:v})
+ }
+ return rows.Err()
 }
