@@ -143,6 +143,12 @@ export default function Workspace(){
     <button className="primary" disabled={mongoBusy||!(mongoCollection||tables[0]?.name)} onClick={()=>void inspectMongo(0)}>{mongoBusy?'Loading…':'Find documents'}</button>
    </div>
    {mongoResult&&<div className="redis-result" aria-live="polite"><strong>{mongoResult.collection}: {mongoResult.documents.length} documents (offset {mongoResult.offset})</strong>
+    <button className="secondary" onClick={()=>{
+      const blob=new Blob([JSON.stringify(mongoResult.documents,null,2)],{type:'application/json'});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');a.href=url;a.download='mongo-'+mongoResult.collection.replace(/[^A-Za-z0-9_-]/g,'_')+'-page.json';a.click();
+      setTimeout(()=>URL.revokeObjectURL(url),1000);
+    }}><Download size={14}/> Download page (Extended JSON)</button>
     <pre>{JSON.stringify(mongoResult.documents,null,2)}</pre>
     <div className="action-row"><button className="secondary" disabled={mongoBusy||mongoResult.offset===0} onClick={()=>void inspectMongo(Math.max(0,mongoResult.offset-mongoResult.limit))}>Previous page</button>
     <button className="secondary" disabled={mongoBusy||mongoResult.nextOffset===null} onClick={()=>void inspectMongo(mongoResult.nextOffset??0)}>Next page</button></div>
