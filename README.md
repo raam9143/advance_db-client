@@ -68,14 +68,22 @@ The Go API is internal to the Compose network, not published on a host port. The
 
 ## Supported engines
 
-| Engine | Connection | Tables | Query | CSV | Status |
-|---|---|---|---|---|---|
-| PostgreSQL | Yes | Yes | Yes | Yes | Implemented, live DB untested here |
-| MySQL / compatible | Yes | Yes | Yes | Yes | Implemented, live DB untested here |
-| SQLite | Yes | Yes | Yes | Yes | Implemented, live DB untested here |
-| Oracle, SQL Server, Redis, MongoDB, ClickHouse and other DBX engines | No | No | No | No | Future migration work |
+| Engine | Status | Verification |
+|---|---|---|
+| PostgreSQL 16 | SQL queries, schema, table paging and exports | Live CI integration |
+| MySQL 8.4 | SQL queries, schema, table paging and exports | Live CI integration |
+| SQLite | SQL queries, schema, table paging, exports and opt-in private snapshot | Live CI integration |
+| MariaDB | MySQL protocol adapter | Dedicated vendor tests pending |
+| CockroachDB | PostgreSQL protocol adapter | Dedicated vendor tests pending |
+| ClickHouse | Verified HTTPS, bounded read-only SQL and metadata | Protocol mock tests; live server pending |
+| Redis 7.4 | Separate read-only RESP2 key inspector; SCAN, GET, TYPE, TTL, HGETALL, LRANGE | Live CI integration |
+| Oracle, SQL Server, MongoDB and remaining DBX engines | Not implemented | Pending |
 
-For now, non-SELECT statements are executed as commands and show only affected rows. Read-only mode is selected by default. No schema mutations, backup/restore, AI assistant, SSH tunneling, pagination, or multi-user RBAC are claimed.
+Redis does **not** use SQL emulation or enable modifying commands. By default, Redis requires TLS; loopback plaintext requires an explicit server opt-in (`REDIS_ALLOW_PLAINTEXT_LOOPBACK=true`).
+
+SQL editor capabilities include bind parameters, EXPLAIN, saved browser-local SQL, JSON/CSV downloads and best-effort cancellation. SQL writes require the operator to enable the server policy and confirm each statement. Read-only accounts and a production identity system are still required.
+
+SQLite snapshot creation is **disabled by default**. To enable, configure an absolute, owner-private (0700) `SQLITE_BACKUP_DIR`; the server creates a bounded, temporary, session-owned backup using SQLite VACUUM INTO. Maximum 128 MiB, ten outstanding backups, 30-minute expiry. Restores are not implemented. See [Redis integration](docs/REDIS_INTEGRATION.md), [phase status](docs/PHASE_STATUS.md) and [security notes](docs/SECURITY.md).
 
 ## Go HTTP API
 
@@ -87,8 +95,8 @@ For now, non-SELECT statements are executed as commands and show only affected r
 | `/v1/connections` | POST | Create connection using `{name,engine,host,port,database,user,password,sslMode,readOnly}` |
 | `/v1/connections/{id}` | DELETE | Disconnect |
 | `/v1/connections/{id}/schema` | GET | List tables |
-| `/v1/connections/{id}/query` | POST | Execute `{sql,timeoutSeconds}` |
-| `/v1/connections/{id}/export` | POST | Export up to 1,000 selected rows as CSV |
+| `/v1/connections/{id}/query` | POST | Execute `{sql,parameters,timeoutSeconds,confirmWrite}` |
+| `/v1/connections/{id}/export?format=csv\|json` | POST | Export up to 1,000 selected rows |\n| `/v1/connections/{id}/redis` | POST | Redis read-only inspector commands |\n| `/v1/connections/{id}/backup` | POST | Opt-in SQLite snapshot with explicit confirmation |\n| `/v1/backups/{id}` | GET / DELETE | Download or remove a session-owned SQLite snapshot |
 
 For SQL statements producing rows the query response has `{columns,rows,rowCount,truncated,durationMs}`. Nonquery responses use `affected`. Query errors are intentionally generic so connection details are not leaked to clients.
 
@@ -100,7 +108,7 @@ For SQL statements producing rows the query response has `{columns,rows,rowCount
 (cd frontend && npm install && npm run typecheck && npm run build)
 ```
 
-In an offline environment only the core Go tests can currently be executed without external dependencies. `go test ./...` and the Next.js build **require downloads**; do not treat them as verified until they run in CI.
+GitHub Actions now runs Go race/integration tests against PostgreSQL 16, MySQL 8.4 and Redis 7.4 service containers, frontend typecheck/build, MCP tests and ClickHouse protocol mocks. See the latest [CI workflow](https://github.com/raam9143/advance_db-client/actions/workflows/ci.yml). Live Oracle, SQL Server, MongoDB, and real ClickHouse validation remain pending.
 
 ## Source and license
 
@@ -108,15 +116,9 @@ Upstream reference: `t8y2/dbx`, `main` commit `99eca47cc33b7a3a71fd57460e61dba2d
 
 Read [`docs/MIGRATION.md`](docs/MIGRATION.md) for the exact scope and the remaining conversion milestones. See [`docs/SECURITY.md`](docs/SECURITY.md) for deployment constraints.
 
-## Publishing on GitHub
+## GitHub repository
 
-This workspace is ready to initialize as `raam9143/advance_db-client`. If an authenticated GitHub CLI is installed with permission to create repositories:
-
-```sh
-bash scripts/publish.sh
-```
-
-The script **creates a new private repository** under `raam9143`, makes a local commit, and pushes `main`. It refuses to overwrite an existing local Git repository or remote repository. Review the code before publishing.
+Source, issues and CI: [raam9143/advance_db-client](https://github.com/raam9143/advance_db-client). The repository is public, with `main` as the default branch. Releases are not yet production-qualified.
 
 ### Enhanced database inspection (migration in progress)
 
