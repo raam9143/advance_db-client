@@ -39,3 +39,6 @@ An authenticated SQLite connection can create a database snapshot with `POST /v1
 
 ## Query cancellation
 The web SQL editor now supports a Cancel query button. The browser abort signal is forwarded by the Next.js BFF to the Go API, which already executes SQL within a bounded, cancellable request context. Cancellation is best-effort and vendor/driver-dependent: a database may finish or commit a write before cancellation. This is **not** explicit transaction rollback, and writes require separate confirmation as before.
+
+## SQL Server and Oracle (TCPS) adapters — under validation
+New `sqlserver` and `oracle` engines use Microsoft go-mssqldb v1.8.2 (Go 1.23-compatible) and go-ora/v2 v2.9.0 (pure Go; no Instant Client). Both enforce encrypted, verified TLS connection strings by default and support table enumeration, column/primary-key/index metadata, dialect-specific paging, and scalar bind parameters. Oracle supports service name or SID (via `serviceMode`). SQL Server and Oracle EXPLAIN is deliberately unavailable until a vetted, engine-specific implementation exists. Read-only checks must be enforced by restricted database logins; driver-specific read-only transactions may not be supported. No Oracle/SQL Server live database compatibility test has been run yet.

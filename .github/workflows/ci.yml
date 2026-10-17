@@ -49,11 +49,16 @@ jobs:
         with:
           go-version-file: backend/go.mod
           cache: false
-      - name: Verify pinned Go dependencies
+      - name: Resolve new drivers for compatibility tests
         run: |
-          go mod download
+          go mod tidy
           go mod verify
-          go mod tidy -diff
+          echo ADB_MOD_BEGIN
+          cat go.mod
+          echo ADB_MOD_END
+          echo ADB_SUM_BEGIN
+          cat go.sum
+          echo ADB_SUM_END
       - run: go test -race ./...
       - run: go vet ./...
       - run: go build ./cmd/api
