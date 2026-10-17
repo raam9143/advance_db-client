@@ -79,7 +79,10 @@ The Go API is internal to the Compose network, not published on a host port. The
 | Redis 7.4 | Separate read-only RESP2 key inspector; SCAN, GET, TYPE, TTL, HGETALL, LRANGE | Live CI integration |
 | Microsoft SQL Server 2022 | SQL, metadata, bind parameters, dialect pagination | Live integration CI passed |
 | Oracle (TCPS) | SQL, metadata, Service Name/SID, bind parameters, Oracle paging | Driver/build tests passed; optional live Oracle test not run |
-| MongoDB and remaining DBX engines | Not implemented | Pending |
+| MongoDB 7.0 | Read-only collection listing, bounded documents, scalar equality filter | CI integration; MongoDB Atlas/replica-set compatibility pending |
+| Remaining DBX engines | Not implemented | Pending |
+
+MongoDB similarly uses a separate document-inspection API, not SQL emulation. Bounded document queries are available through the web UI and read-only MCP tools. See [MongoDB details](docs/MONGODB.md). Remote MongoDB connections require validated TLS; local plaintext requires an explicitly enabled loopback-only development setting.
 
 Redis does **not** use SQL emulation or enable modifying commands. By default, Redis requires TLS; loopback plaintext requires an explicit server opt-in (`REDIS_ALLOW_PLAINTEXT_LOOPBACK=true`).
 
@@ -112,7 +115,7 @@ For SQL statements producing rows the query response has `{columns,rows,rowCount
 (cd frontend && npm install && npm run typecheck && npm run build)
 ```
 
-GitHub Actions now runs Go race/integration tests against PostgreSQL 16, MySQL 8.4, Redis 7.4 and Microsoft SQL Server 2022 service containers, frontend typecheck/build, MCP tests and ClickHouse protocol mocks. See the latest [CI workflow](https://github.com/raam9143/advance_db-client/actions/workflows/ci.yml). Live Oracle, SQL Server, MongoDB, and real ClickHouse validation remain pending.
+GitHub Actions now runs Go race/integration tests against PostgreSQL 16, MySQL 8.4, Redis 7.4, MongoDB 7.0 and Microsoft SQL Server 2022 service containers, frontend typecheck/build, MCP tests and ClickHouse protocol mocks. See the latest [CI workflow](https://github.com/raam9143/advance_db-client/actions/workflows/ci.yml). Live Oracle, SQL Server, MongoDB, and real ClickHouse validation remain pending.
 
 ## Source and license
 

@@ -63,6 +63,76 @@ jobs:
           go mod verify
           go mod tidy -diff
       - run: go test -race ./...
+      - name: Explicit MongoDB live read-only integration
+        run: go test -race -run '^TestMongoLiveReadonly
+      - run: go build ./cmd/api
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npm run build
+
+  mcp:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test mcp/server.test.mjs
+
+  clickhouse-http:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache: false
+      - run: go mod download && go mod verify
+      - run: go test -race ./internal/chhttp ./internal/server ./cmd/adbctl
+      - run: go vet ./internal/chhttp ./internal/server ./cmd/adbctl
+
+  sqlserver-integration:
+    runs-on: ubuntu-latest
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_SA_PASSWORD: "Test_0nly_Str0ng_2026!"
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/bin/bash -c 'echo > /dev/tcp/127.0.0.1/1433'"
+          --health-interval 10s --health-timeout 5s --health-retries 20 --health-start-period 30s
+    env:
+      TEST_MSSQL_HOST: 127.0.0.1
+      TEST_MSSQL_PASSWORD: "Test_0nly_Str0ng_2026!"
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache: false
+      - run: go mod download && go mod verify
+      - name: Live Microsoft SQL Server database integration
+        run: go test -race -run '^TestSQLServerLive$' -count=1 -v ./integration
+ -count=1 -v ./integration
       - run: go vet ./...
       - run: go build ./cmd/api
   frontend:
