@@ -1,0 +1,1 @@
+{"name":"advance-db-client-mcp","version":"0.1.0","type":"module","private":true,"scripts":{"test":"node --test server.test.mjs"},"engines":{"node":">=22"}}

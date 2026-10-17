@@ -8,7 +8,7 @@ This is a web-first rewrite foundation, **not yet a complete port** of t8y2/dbx.
 | 2 Database support | In progress | PostgreSQL, MySQL, SQLite baseline; MariaDB/CockroachDB protocol aliases only. Oracle, SQL Server, ClickHouse, Mongo, Redis and 100+ other drivers not ported |
 | 3 Advanced SQL workspace | In progress | Bind parameters, EXPLAIN, browser-local saved queries implemented. Transactions, multi-tab editing, autocomplete, cancellation and Playwright E2E pending |
 | 4 Data movement | In progress | Bounded CSV/JSON export; streamed import, full backup, restore, migration/diff pending |
-| 5 SSH/AI/MCP/CLI | Pending | SSH tunnels, cloud integrations, AI permissions, MCP/CLI and plugins |
+| 5 SSH/AI/MCP/CLI | In progress | SSH tunnels, cloud integrations, AI permissions and plugins; read-only CLI/MCP initial implementations added |
 | 6 Production release | Pending | OIDC/SSO, MFA, account isolation, observability, SBOM, stable dependencies, disaster recovery validation |
 
 ## Test evidence
