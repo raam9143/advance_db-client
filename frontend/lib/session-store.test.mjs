@@ -20,4 +20,5 @@ test('cross-process Redis backed revocation and single-use code',async(t)=>{
  assert.equal(await consumeOTP(secret,otp),true);
  assert.equal(await consumeOTP(secret,otp),false);
 });
-\nafter(async()=>{await closeSessionStore()});
+
+after(async()=>{await closeSessionStore()});
