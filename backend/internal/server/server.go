@@ -436,12 +436,7 @@ func schemaSQL(engine string) (string, error) {
 	switch strings.ToLower(engine) {
 	case "postgres","cockroach":
 		return "SELECT table_schema, table_name FROM information_schema.tables WHERE table_schema NOT IN ('pg_catalog','information_schema') AND table_type='BASE TABLE' ORDER BY 1,2", nil
-	case "clickhouse":
-        if c.SSLMode!=""&&c.SSLMode!="require"&&c.SSLMode!="verify-full"{return "","",errors.New("ClickHouse requires verified TLS")}
-        u:=&url.URL{Scheme:"https",Host:net.JoinHostPort(c.Host,fmt.Sprint(c.Port)),Path:"/",User:url.UserPassword(c.User,c.Password)}
-        values:=url.Values{};values.Set("database",c.Database);u.RawQuery=values.Encode()
-        return "adbclickhouse",u.String(),nil
-    case "mysql","mariadb":
+	case "mysql","mariadb":
 		return "SELECT table_schema, table_name FROM information_schema.tables WHERE table_schema=DATABASE() AND table_type='BASE TABLE' ORDER BY 1,2", nil
 	case "clickhouse":
         return "SELECT database,name FROM system.tables WHERE database=currentDatabase() AND is_temporary=0 ORDER BY database,name",nil
@@ -499,6 +494,11 @@ func ConfigDSN(c ConnectionRequest) (driver, dsn string, err error) {
 		return "", "", errors.New("invalid database port")
 	}
 	switch engine {
+	case "clickhouse":
+		if c.SSLMode!="" && c.SSLMode!="require" && c.SSLMode!="verify-full" {return "","",errors.New("ClickHouse requires verified TLS")}
+		u:=&url.URL{Scheme:"https",Host:net.JoinHostPort(c.Host,fmt.Sprint(c.Port)),Path:"/",User:url.UserPassword(c.User,c.Password)}
+		params:=url.Values{};params.Set("database",c.Database);u.RawQuery=params.Encode()
+		return "adbclickhouse",u.String(),nil
 	case "postgres","cockroach":
 		mode := c.SSLMode
 		if mode == "" {
