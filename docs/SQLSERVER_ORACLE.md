@@ -10,7 +10,7 @@ These engines have driver-backed Go connection support; this is not a complete p
 - Explanations, SSPI, Microsoft Entra identity, Azure-specific authentication, Always Encrypted, transactional management and vendor-specific features have **not** been integrated.
 - A loopback-only test mode `sslMode=local-insecure` requires `SQLSERVER_ALLOW_UNVERIFIED_LOOPBACK=true`, and requires an actual loopback hostname/IP. It still encrypts network traffic but does not validate the local certificate. Do not enable this option in production.
 
-CI provisions disposable Microsoft SQL Server 2022 with a nonproduction password and validates the real API behavior. The test lives in `backend/integration/sqlserver_integration_test.go`.
+CI provisions disposable Microsoft SQL Server 2022 with a nonproduction password and validates the real API behavior. The [five-job run 39041968918](https://github.com/raam9143/advance_db-client/actions/runs/39041968918) passed, including the live SQL Server integration. Verified CI traffic uses the explicit loopback-only certificate exception; certificate-validated connectivity to a real remote instance still needs testing. The test lives in `backend/integration/sqlserver_integration_test.go`.
 
 ## Oracle (TCPS)
 

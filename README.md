@@ -77,7 +77,9 @@ The Go API is internal to the Compose network, not published on a host port. The
 | CockroachDB | PostgreSQL protocol adapter | Dedicated vendor tests pending |
 | ClickHouse | Verified HTTPS, bounded read-only SQL and metadata | Protocol mock tests; live server pending |
 | Redis 7.4 | Separate read-only RESP2 key inspector; SCAN, GET, TYPE, TTL, HGETALL, LRANGE | Live CI integration |
-| Oracle, SQL Server, MongoDB and remaining DBX engines | Not implemented | Pending |
+| Microsoft SQL Server 2022 | SQL, metadata, bind parameters, dialect pagination | Live integration CI passed |
+| Oracle (TCPS) | SQL, metadata, Service Name/SID, bind parameters, Oracle paging | Driver/build tests passed; optional live Oracle test not run |
+| MongoDB and remaining DBX engines | Not implemented | Pending |
 
 Redis does **not** use SQL emulation or enable modifying commands. By default, Redis requires TLS; loopback plaintext requires an explicit server opt-in (`REDIS_ALLOW_PLAINTEXT_LOOPBACK=true`).
 
@@ -98,6 +100,8 @@ SQLite snapshot creation is **disabled by default**. To enable, configure an abs
 | `/v1/connections/{id}/query` | POST | Execute `{sql,parameters,timeoutSeconds,confirmWrite}` |
 | `/v1/connections/{id}/export?format=csv\|json` | POST | Export up to 1,000 selected rows |\n| `/v1/connections/{id}/redis` | POST | Redis read-only inspector commands |\n| `/v1/connections/{id}/backup` | POST | Opt-in SQLite snapshot with explicit confirmation |\n| `/v1/backups/{id}` | GET / DELETE | Download or remove a session-owned SQLite snapshot |
 
+For SQL Server and Oracle deployment prerequisites, TLS requirements, and optional Oracle integration-test configuration, see [Enterprise driver notes](docs/SQLSERVER_ORACLE.md).
+
 For SQL statements producing rows the query response has `{columns,rows,rowCount,truncated,durationMs}`. Nonquery responses use `affected`. Query errors are intentionally generic so connection details are not leaked to clients.
 
 ## Tests
@@ -108,7 +112,7 @@ For SQL statements producing rows the query response has `{columns,rows,rowCount
 (cd frontend && npm install && npm run typecheck && npm run build)
 ```
 
-GitHub Actions now runs Go race/integration tests against PostgreSQL 16, MySQL 8.4 and Redis 7.4 service containers, frontend typecheck/build, MCP tests and ClickHouse protocol mocks. See the latest [CI workflow](https://github.com/raam9143/advance_db-client/actions/workflows/ci.yml). Live Oracle, SQL Server, MongoDB, and real ClickHouse validation remain pending.
+GitHub Actions now runs Go race/integration tests against PostgreSQL 16, MySQL 8.4, Redis 7.4 and Microsoft SQL Server 2022 service containers, frontend typecheck/build, MCP tests and ClickHouse protocol mocks. See the latest [CI workflow](https://github.com/raam9143/advance_db-client/actions/workflows/ci.yml). Live Oracle, SQL Server, MongoDB, and real ClickHouse validation remain pending.
 
 ## Source and license
 
