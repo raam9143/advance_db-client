@@ -1,0 +1,31 @@
+services:
+  api:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      API_LISTEN: 0.0.0.0:8080
+      API_TOKEN: ${API_TOKEN:?Set API_TOKEN in .env}
+      SQLITE_ALLOWED_DIR: /data
+    volumes:
+      - ./data:/data
+    networks:
+      - dbclient
+    security_opt:
+      - no-new-privileges:true
+  web:
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      APP_PASSWORD: ${APP_PASSWORD:?Set APP_PASSWORD in .env}
+      APP_SESSION_SECRET: ${APP_SESSION_SECRET:?Set APP_SESSION_SECRET in .env}
+      API_TOKEN: ${API_TOKEN:?Set API_TOKEN in .env}
+      GO_API_URL: http://api:8080
+    depends_on:
+      - api
+    networks:
+      - dbclient
+networks:
+  dbclient:
+    driver: bridge

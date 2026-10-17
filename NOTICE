@@ -1,0 +1,10 @@
+Advance DB Client
+Copyright 2026 Advance DB Client contributors.
+
+Independent incremental implementation inspired by:
+DBX — https://github.com/t8y2/dbx
+Original copyright belongs to the DBX contributors.
+Original repository license: Apache License, Version 2.0.
+Reference used for architecture and feature planning:
+https://github.com/t8y2/dbx/commit/99eca47cc33b7a3a71fd57460e61dba2d30f7504
+No representation is made that this new codebase is a complete port or that the upstream maintainers endorse it.
