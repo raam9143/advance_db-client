@@ -51,3 +51,30 @@ jobs:
           path: .
           format: spdx-json
           artifact-name: advance-db-client-sbom.spdx.json
+
+  container-image-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build locked backend container image
+        run: docker build --pull --tag advance-db-api:security ./backend
+      - name: Scan API image for high and critical vulnerabilities
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: image
+          image-ref: advance-db-api:security
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+      - name: Build locked frontend container image
+        run: docker build --pull --tag advance-db-web:security ./frontend
+      - name: Scan frontend image for high and critical vulnerabilities
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: image
+          image-ref: advance-db-web:security
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
