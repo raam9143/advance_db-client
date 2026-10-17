@@ -77,6 +77,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Generate npm package lock for reproducible release
+        run: |
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          echo ADB_NPM_LOCK_START
+          cat package-lock.json
+          echo ADB_NPM_LOCK_END
       - run: npm install --no-audit --no-fund
       - run: npm run typecheck
       - run: npm run build
@@ -88,7 +94,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node --test mcp/server.test.mjs frontend/lib/totp.test.mjs
+      - run: node --test mcp/server.test.mjs frontend/lib/totp.test.mjs frontend/lib/oidc.test.mjs
 
   clickhouse-http:
     runs-on: ubuntu-latest
