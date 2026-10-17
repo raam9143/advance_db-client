@@ -46,3 +46,15 @@ Upstream DBX is a sizeable Rust workspace with Vue + TypeScript + Vite desktop U
 ## Acceptance criteria before declaring full conversion
 
 Ported features must be mapped 1:1 to upstream contract tests; database combinations tested; UI workflows screenshotted and compared; desktop/CLI/MCP accounted for; security reviewed; integration CI green; license notices preserved. Do not mark any unsupported driver or feature as migrated.
+
+## 2026-10-17 incremental changes
+
+- **SQL foundation:** read-only table preview with parameter-validated pagination, metadata for columns/primary keys/indexes, safe quoting of server-generated table names, CSV formula escaping.
+- **Connection security:** explicit `ALLOW_WRITE_QUERIES=true` required for writes, statement-hash log event rather than raw SQL, 24-connection cap, strict connection ID checks.
+- **Engine adapters:** MariaDB/MySQL and CockroachDB/PostgreSQL *protocol aliases only*. Compatibility with vendor-specific SQL semantics and releases is not verified.
+- **Frontend:** table inspector, preview pagination, MariaDB/CockroachDB selectors, URL query forwarding through authenticated Next.js BFF.
+- **CI:** PostgreSQL 16 and MySQL 8.4 service containers, SQLite and SQL integration test suite, race tests, vet, backend build and Next.js build.
+
+### Still pending
+
+This does **not** complete phase 1 or phase 2. Persistent encrypted credentials, granular RBAC, proper dialect parser, audited approvals, full version matrix, Oracle, ClickHouse, SQL Server, Redis, MongoDB, import/backup/restore, CLI, MCP, desktop and SSO/OIDC are not ported. CI must actually finish successfully before tests are called green.

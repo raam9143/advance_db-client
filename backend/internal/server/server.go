@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"crypto/rand"
+ "crypto/sha256"
 	"crypto/subtle"
 	"database/sql"
 	"encoding/csv"
@@ -11,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+ "log"
 	"net"
 	"net/http"
 	"net/url"
@@ -89,7 +91,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case strings.HasPrefix(r.URL.Path, "/v1/connections/"):
 		tail := strings.TrimPrefix(r.URL.Path, "/v1/connections/")
 		parts := strings.Split(tail, "/")
-		if len(parts) == 1 && r.Method == "DELETE" {
+		if len(parts)>0 && (len(parts[0])!=48||strings.Trim(parts[0],"0123456789abcdef")!=""){fail(w,404,"connection not found");return}
+  if len(parts) == 1 && r.Method == "DELETE" {
 			s.disconnect(w, parts[0])
 			return
 		}
@@ -97,6 +100,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			s.schema(w, r, parts[0])
 			return
 		}
+  if len(parts)==2 && r.Method=="GET" && parts[1]=="describe"{s.describe(w,r,parts[0]);return}
+  if len(parts)==2 && r.Method=="GET" && parts[1]=="table"{s.tablePage(w,r,parts[0]);return}
 		if len(parts) == 2 && r.Method == "POST" && parts[1] == "query" {
 			s.query(w, r, parts[0])
 			return
@@ -189,7 +194,8 @@ func (s *Server) connect(w http.ResponseWriter, r *http.Request) {
 	id := hex.EncodeToString(b[:])
 	info := PublicConnection{ID: id, Name: c.Name, Engine: c.Engine, Database: c.Database, Host: c.Host, ReadOnly: c.ReadOnly}
 	s.mu.Lock()
-	s.dbs[id] = &session{info: info, db: db, expiry: s.now().Add(connectionTTL)}
+	if len(s.dbs)>=24{s.mu.Unlock();db.Close();fail(w,429,"connection limit reached");return}
+  s.dbs[id] = &session{info: info, db: db, expiry: s.now().Add(connectionTTL)}
 	s.mu.Unlock()
 	respond(w, 201, info)
 }
@@ -287,7 +293,11 @@ func (s *Server) run(ctx context.Context, c *session, q QueryRequest) (QueryResu
 	defer cancel()
 	started := time.Now()
 	if !ReadOnlySQL(q.SQL) {
-		result, err := c.db.ExecContext(ctx, q.SQL)
+		if os.Getenv("ALLOW_WRITE_QUERIES")!="true"{return out,errors.New("write queries are disabled by server policy")}
+  if c.info.ReadOnly{return out,errors.New("read-only connection cannot execute writes")}
+  result, err := c.db.ExecContext(ctx, q.SQL)
+  fingerprint:=sha256.Sum256([]byte(q.SQL))
+  log.Printf("db_write engine=%s connection_id=%s statement_sha256=%x success=%t",c.info.Engine,c.info.ID,fingerprint,err==nil)
 		if err != nil {
 			return out, errors.New("SQL execution failed")
 		}
@@ -385,9 +395,15 @@ func (s *Server) export(w http.ResponseWriter, r *http.Request, id string) {
 				r[i] = fmt.Sprint(x)
 			}
 		}
-		_ = writer.Write(r)
+		for i:=range r{r[i]=safeCSVCell(r[i])}
+  _ = writer.Write(r)
 	}
 	writer.Flush()
+}
+func safeCSVCell(value string)string{
+ trimmed:=strings.TrimLeft(value," \t\r\n")
+ if trimmed!=""&&strings.ContainsRune("=+-@",rune(trimmed[0])){return "'"+value}
+ return value
 }
 func respond(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
@@ -399,9 +415,9 @@ func fail(w http.ResponseWriter, status int, message string) {
 }
 func schemaSQL(engine string) (string, error) {
 	switch strings.ToLower(engine) {
-	case "postgres":
+	case "postgres","cockroach":
 		return "SELECT table_schema, table_name FROM information_schema.tables WHERE table_schema NOT IN ('pg_catalog','information_schema') AND table_type='BASE TABLE' ORDER BY 1,2", nil
-	case "mysql":
+	case "mysql","mariadb":
 		return "SELECT table_schema, table_name FROM information_schema.tables WHERE table_schema=DATABASE() AND table_type='BASE TABLE' ORDER BY 1,2", nil
 	case "sqlite":
 		return "SELECT 'main', name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name", nil
@@ -457,7 +473,7 @@ func ConfigDSN(c ConnectionRequest) (driver, dsn string, err error) {
 		return "", "", errors.New("invalid database port")
 	}
 	switch engine {
-	case "postgres":
+	case "postgres","cockroach":
 		mode := c.SSLMode
 		if mode == "" {
 			mode = "require"
@@ -470,7 +486,7 @@ func ConfigDSN(c ConnectionRequest) (driver, dsn string, err error) {
 		values.Set("sslmode", mode)
 		u.RawQuery = values.Encode()
 		return "pgx", u.String(), nil
-	case "mysql":
+	case "mysql","mariadb":
 		// MySQL driver uses parseTime and TLS when supported. TLS custom cert deployment requires a custom driver registration.
 		if c.SSLMode != "" && c.SSLMode != "true" && c.SSLMode != "false" {
 			return "", "", errors.New("MySQL sslMode must be true or false")
@@ -484,7 +500,7 @@ func ConfigDSN(c ConnectionRequest) (driver, dsn string, err error) {
 		}
 		return "mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s?parseTime=true&tls=%s&timeout=8s&readTimeout=30s&writeTimeout=30s", c.User, c.Password, net.JoinHostPort(c.Host, fmt.Sprint(c.Port)), url.PathEscape(c.Database), tls), nil
 	default:
-		return "", "", errors.New("supported engines: postgres, mysql, sqlite")
+		return "", "", errors.New("supported engines: postgres, cockroach, mysql, mariadb, sqlite")
 	}
 }
 

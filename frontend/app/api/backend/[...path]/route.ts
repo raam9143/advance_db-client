@@ -10,7 +10,7 @@ async function proxy(req:Request, {params}:{params:Promise<{path:string[]}>}):Pr
  const path='/'+segments.join('/');
  const allowed=path==='/v1/connections' && ['GET','POST'].includes(req.method)
   || /^\/v1\/connections\/[a-f0-9]{48}$/.test(path)&&req.method==='DELETE'
-  || /^\/v1\/connections\/[a-f0-9]{48}\/schema$/.test(path)&&req.method==='GET'
+  || /^\/v1\/connections\/[a-f0-9]{48}\/(schema|describe|table)$/.test(path)&&req.method==='GET'
   || /^\/v1\/connections\/[a-f0-9]{48}\/(query|export)$/.test(path)&&req.method==='POST';
  if (!allowed) return reply('Not found',404);
  const token=process.env.API_TOKEN,base=process.env.GO_API_URL||'http://127.0.0.1:8080';
@@ -18,7 +18,7 @@ async function proxy(req:Request, {params}:{params:Promise<{path:string[]}>}):Pr
  const input=req.method==='POST' ? await req.text() : undefined;
  if (input && input.length>1_000_000) return reply('Request too large',413);
  try {
-  const upstream=await fetch(`${base}${path}`,{method:req.method,headers:{Authorization:`Bearer ${token}`, ...(input?{'Content-Type':'application/json'}:{})},body:input,cache:'no-store',signal:AbortSignal.timeout(33000)});
+  const upstream=await fetch(`${base}${path}${new URL(req.url).search}`,{method:req.method,headers:{Authorization:`Bearer ${token}`, ...(input?{'Content-Type':'application/json'}:{})},body:input,cache:'no-store',signal:AbortSignal.timeout(33000)});
   const isCSV=path.endsWith('/export');
   return new Response(upstream.body,{status:upstream.status,headers:{'Content-Type':isCSV&&upstream.ok?'text/csv; charset=utf-8':'application/json','Cache-Control':'no-store',...(isCSV&&upstream.ok?{'Content-Disposition':'attachment; filename="results.csv"'}:{})}});
  } catch {return reply('Database service unavailable',502)}

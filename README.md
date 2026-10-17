@@ -117,3 +117,13 @@ bash scripts/publish.sh
 ```
 
 The script **creates a new private repository** under `raam9143`, makes a local commit, and pushes `main`. It refuses to overwrite an existing local Git repository or remote repository. Review the code before publishing.
+
+### Enhanced database inspection (migration in progress)
+
+Select a table to inspect column types, primary keys, indexes, and preview rows using bounded server-side pagination (250 maximum per request). The database API has two new GET routes: `/v1/connections/{id}/describe?schema=&table=` and `/v1/connections/{id}/table?schema=&table=&limit=50&offset=0`.
+
+**New protocol aliases:** MariaDB uses the MySQL protocol; CockroachDB uses the PostgreSQL protocol. Vendor-specific compatibility and live tests are still outstanding.
+
+**Write safety:** SQL writes are *disabled* unless the backend environment sets `ALLOW_WRITE_QUERIES=true`, and each write requires a connection opened without the read-only flag. SQL text is not logged; SHA-256 statement fingerprints and success/failure are logged. This logging is not a persistent audit trail.
+
+**Tests:** `cd backend && go test ./internal/server` runs dependency-free unit tests. `go test -race ./...` runs driver-backed SQLite tests; the PostgreSQL and MySQL integration cases require disposable test databases selected by `TEST_POSTGRES_HOST` and `TEST_MYSQL_HOST`, provisioned by CI. Run `cd frontend && npm install && npm run typecheck && npm run build` to verify the Next.js build.
