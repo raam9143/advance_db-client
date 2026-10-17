@@ -92,6 +92,10 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	owner, err := s.owner(r)
     if err != nil {fail(w,401,"invalid session scope");return}
     r=r.WithContext(context.WithValue(r.Context(),scopeKey{},owner))
+    // Scope role is established only after verifying HMAC-protected proxy headers.
+    if requestRole(r)=="viewer"&&r.Method=="POST"&&(r.URL.Path=="/v1/ai/review"||strings.HasSuffix(r.URL.Path,"/backup")){
+     fail(w,403,"viewer role does not permit this operation");return
+    }
     if s.auditError!=nil{fail(w,503,"audit log unavailable");return}
     if s.audit!=nil{
      if err:=s.audit.Append(r.Method,r.URL.Path,owner,"started",0);err!=nil{fail(w,503,"audit log write failed");return}
@@ -209,6 +213,7 @@ func (s *Server) connect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	c.Engine = strings.ToLower(strings.TrimSpace(c.Engine))
+ if requestRole(r)=="viewer"{c.ReadOnly=true}
  if c.Engine=="redis"{s.connectRedis(w,r,c);return}
  if c.Engine=="mongo"{s.connectMongo(w,r,c);return}
  originalHost:=c.Host

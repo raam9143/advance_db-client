@@ -26,7 +26,7 @@ async function proxy(req:Request, {params}:{params:Promise<{path:string[]}>}):Pr
  if (input && input.length>1_000_000) return reply('Request too large',413);
  try {
   const scope=sessionScope((await cookies()).get(COOKIE_NAME)!.value,token);
-  const upstream=await fetch(`${base}${path}${new URL(req.url).search}`,{method:req.method,headers:{Authorization:`Bearer ${token}`,'X-ADB-Session-ID':scope.id,'X-ADB-Session-Proof':scope.proof, ...(input?{'Content-Type':'application/json'}:{})},body:input,cache:'no-store',signal:AbortSignal.any([req.signal,AbortSignal.timeout(33000)])});
+  const upstream=await fetch(`${base}${path}${new URL(req.url).search}`,{method:req.method,headers:{Authorization:`Bearer ${token}`,'X-ADB-Session-ID':scope.id,'X-ADB-Session-Proof':scope.proof,'X-ADB-Role':scope.role,'X-ADB-Role-Proof':scope.roleProof, ...(input?{'Content-Type':'application/json'}:{})},body:input,cache:'no-store',signal:AbortSignal.any([req.signal,AbortSignal.timeout(33000)])});
   const format=new URL(req.url).searchParams.get('format');
   const isExport=path.endsWith('/export')&&upstream.ok;
   const isCSV=isExport&&format!=='json';

@@ -5,6 +5,7 @@ export const runtime = 'nodejs';
 const attempts = new Map<string, { count: number; until: number }>();
 export async function POST(req: Request) {
  if (!sameOrigin(req)) return NextResponse.json({error:'Invalid origin'}, {status:403});
+ if(process.env.OIDC_REQUIRED==='true')return NextResponse.json({error:'Local password login is disabled; use SSO'}, {status:403});
  if (Number(req.headers.get('content-length') || '0') > 4096) return NextResponse.json({error:'Payload too large'}, {status:413});
  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
  const now=Date.now(), entry=attempts.get(ip);

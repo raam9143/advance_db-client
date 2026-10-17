@@ -7,6 +7,13 @@ import(
  "net/http"
 )
 type scopeKey struct{}
+type roleKey struct{}
+func requestRole(r *http.Request)string{role,_:=r.Context().Value(roleKey{}).(string);if role==""{return "admin"};return role}
+func verifiedRole(token,id,role string)string{
+ mac:=hmac.New(sha256.New,[]byte(token))
+ mac.Write([]byte("adb-role:"+id+":"+role))
+ return hex.EncodeToString(mac.Sum(nil))
+}
 func requestOwner(r *http.Request)string{
  owner,_:=r.Context().Value(scopeKey{}).(string)
  if owner==""{return "service"}
@@ -23,7 +30,23 @@ func (s *Server) owner(r *http.Request)(string,error){
  mac:=hmac.New(sha256.New,[]byte(s.token))
  mac.Write([]byte("adb-session:"+id))
  if !hmac.Equal(signature,mac.Sum(nil)){return "",errors.New("scope signature mismatch")}
+ role:=r.Header.Get("X-ADB-Role")
+ proof:=r.Header.Get("X-ADB-Role-Proof")
+ if role==""&&proof==""{
+  // Legacy scoped requests may only browse data, never mutate data.
+  role="viewer"
+ }else{
+  if role!="admin"&&role!="viewer"||len(proof)!=64{return "",errors.New("invalid scoped role")}
+  signature,err:=hex.DecodeString(proof)
+  if err!=nil||!hmac.Equal(signature,decodeRoleProof(s.token,id,role)){return "",errors.New("invalid signed scoped role")}
+ }
+ *r= *r.WithContext(context.WithValue(r.Context(),roleKey{},role))
  return id,nil
+}
+func decodeRoleProof(token,id,role string)[]byte{
+ mac:=hmac.New(sha256.New,[]byte(token))
+ mac.Write([]byte("adb-role:"+id+":"+role))
+ return mac.Sum(nil)
 }
 func verifiedScope(token,id string)(string,string){
  mac:=hmac.New(sha256.New,[]byte(token))
