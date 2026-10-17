@@ -24,6 +24,7 @@ func TestRedisOnlyInspectorEndpoint(t *testing.T){
  if w.Code!=200||strings.TrimSpace(w.Body.String())!="[]"{t.Fatalf("schema got %d %s",w.Code,w.Body.String())}
 }
 func TestRedisConnectionTLSRequired(t *testing.T){
+ t.Setenv("REDIS_ALLOW_PLAINTEXT_LOOPBACK","false")
  s:=New("secret")
  body:=`{"name":"redis","engine":"redis","host":"127.0.0.1","port":6379,"database":"0","sslMode":"disable"}`
  req:=httptest.NewRequest("POST","/v1/connections",bytes.NewBufferString(body))
