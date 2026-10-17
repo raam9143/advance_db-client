@@ -88,13 +88,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Resolve Redis-backed session dependency lock
-        run: |
-          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
-          echo ADB_SESSION_LOCK_BEGIN
-          cat package-lock.json
-          echo ADB_SESSION_LOCK_END
-      - run: npm install --no-audit --no-fund
+      - name: Verify locked frontend dependency graph
+        run: npm ci --no-audit --no-fund
       - run: node --test lib/session-store.test.mjs
       - run: npm run typecheck
       - run: npm run build
