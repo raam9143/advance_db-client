@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 const alphabet='ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
-const used=new Map<string,number>();
+const used=new Map();
 function parseBase32(secret){
  if(typeof secret!=='string')throw Error('APP_TOTP_SECRET missing');
  const normalized=secret.trim().replace(/\s/g,'').toUpperCase().replace(/=+$/,'');
