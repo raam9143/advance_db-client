@@ -57,3 +57,5 @@ export async function consumeOTP(secret,otp){
  const key=createHmac('sha256',secret).update('totp:'+otp).digest('hex');
  return await c.set('adb:totp:'+key,'1',{EX:120,NX:true})==='OK';
 }
+
+export async function closeSessionStore(){const prior=pending;pending=undefined;if(prior){const c=await prior;c.destroy()}}

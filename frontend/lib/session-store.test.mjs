@@ -1,7 +1,7 @@
-import test from 'node:test';
+import test,{after} from 'node:test';
 import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
-import { redisURLIsSafe,persistSession,sessionActive,revokeSession,consumeOTP } from './session-store.mjs';
+import { redisURLIsSafe,persistSession,sessionActive,revokeSession,consumeOTP,closeSessionStore } from './session-store.mjs';
 
 test('Redis session URL validation refuses remote plaintext',()=>{
  assert.throws(()=>redisURLIsSafe({SESSION_REDIS_URL:'redis://db.example.com:6379',SESSION_REDIS_ALLOW_PLAINTEXT_LOOPBACK:'true'}));
@@ -20,3 +20,4 @@ test('cross-process Redis backed revocation and single-use code',async(t)=>{
  assert.equal(await consumeOTP(secret,otp),true);
  assert.equal(await consumeOTP(secret,otp),false);
 });
+\nafter(async()=>{await closeSessionStore()});
