@@ -69,10 +69,13 @@ type Server struct {
 	dbs   map[string]*session
  backups map[string]*backupSnapshot
 	now   func() time.Time
+ audit *auditLog
+ auditError error
 }
 
 func New(token string) *Server {
-	return &Server{token: token, dbs: map[string]*session{}, backups:map[string]*backupSnapshot{},now: time.Now}
+	a,err:=openAuditLog()
+ return &Server{token: token, dbs: map[string]*session{}, backups:map[string]*backupSnapshot{},now: time.Now,audit:a,auditError:err}
 }
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
@@ -89,6 +92,13 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	owner, err := s.owner(r)
     if err != nil {fail(w,401,"invalid session scope");return}
     r=r.WithContext(context.WithValue(r.Context(),scopeKey{},owner))
+    if s.auditError!=nil{fail(w,503,"audit log unavailable");return}
+    if s.audit!=nil{
+     if err:=s.audit.Append(r.Method,r.URL.Path,owner,"started",0);err!=nil{fail(w,503,"audit log write failed");return}
+     aw:=&auditResponseWriter{ResponseWriter:w,status:200}
+     defer func(){_=s.audit.Append(r.Method,r.URL.Path,owner,"finished",aw.status)}()
+     w=aw
+    }
     if r.ContentLength > maxBody {
 		fail(w, 413, "request too large")
 		return
