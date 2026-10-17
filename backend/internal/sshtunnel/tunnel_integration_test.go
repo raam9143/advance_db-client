@@ -35,12 +35,12 @@ func TestVerifiedSSHLocalForward(t *testing.T){
    _,chans,reqs,e:=ssh.NewServerConn(conn,sshCfg);if e!=nil{return}
    go ssh.DiscardRequests(reqs)
    for ch:=range chans{
-    if ch.ChannelType()!="direct-tcpip"{_,_=ch.Reject(ssh.Prohibited,"forwarding refused");continue}
+    if ch.ChannelType()!="direct-tcpip"{_=ch.Reject(ssh.Prohibited,"forwarding refused");continue}
     var req struct{Host string;Port uint32;Origin string;OriginPort uint32}
     if ssh.Unmarshal(ch.ExtraData(),&req)!=nil||req.Host!="127.0.0.1"||req.Port!=uint32(echo.Addr().(*net.TCPAddr).Port){
-     _,_=ch.Reject(ssh.Prohibited,"destination refused");continue
+     _=ch.Reject(ssh.Prohibited,"destination refused");continue
     }
-    remote,e:=net.DialTimeout("tcp",echo.Addr().String(),3*time.Second);if e!=nil{_,_=ch.Reject(ssh.ConnectionFailed,"destination offline");continue}
+    remote,e:=net.DialTimeout("tcp",echo.Addr().String(),3*time.Second);if e!=nil{_=ch.Reject(ssh.ConnectionFailed,"destination offline");continue}
     pipe,requests,e:=ch.Accept();if e!=nil{_ =remote.Close();continue}
     go ssh.DiscardRequests(requests)
     go func(){defer remote.Close();defer pipe.Close()
