@@ -57,16 +57,11 @@ jobs:
         with:
           go-version-file: backend/go.mod
           cache: false
-      - name: Resolve MongoDB dependencies for first validation
+      - name: Verify pinned Go dependencies
         run: |
-          go mod tidy
+          go mod download
           go mod verify
-          echo MONGO_GO_MOD_BEGIN
-          cat go.mod
-          echo MONGO_GO_MOD_END
-          echo MONGO_GO_SUM_BEGIN
-          cat go.sum
-          echo MONGO_GO_SUM_END
+          go mod tidy -diff
       - run: go test -race ./...
       - run: go vet ./...
       - run: go build ./cmd/api
@@ -104,7 +99,7 @@ jobs:
         with:
           go-version-file: backend/go.mod
           cache: false
-      - run: go mod tidy
+      - run: go mod download && go mod verify
       - run: go test -race ./internal/chhttp ./internal/server ./cmd/adbctl
       - run: go vet ./internal/chhttp ./internal/server ./cmd/adbctl
 
@@ -133,6 +128,6 @@ jobs:
         with:
           go-version-file: backend/go.mod
           cache: false
-      - run: go mod tidy && go mod verify
+      - run: go mod download && go mod verify
       - name: Live Microsoft SQL Server database integration
         run: go test -race -run '^TestSQLServerLive$' -count=1 -v ./integration
