@@ -33,7 +33,7 @@ func TestReadOnlySQL(t *testing.T) {
 	cases := []struct {
 		sql  string
 		want bool
-	}{{"SELECT 1", true}, {"SELECT * FROM public.foo;", true}, {"  WITH x AS (SELECT 1) SELECT * FROM x", true}, {"SELECT 1; DELETE FROM users", false}, {"SELECT 1 --comment", false}, {"DELETE FROM x", false}, {"SELECT 1 FOR UPDATE", false}, {"EXPLAIN DELETE FROM users", false}, {"SELECT 1 /*abc*/", false}, {"", false}}
+	}{{"SELECT 1", true}, {"SELECT * FROM public.foo;", true}, {"  WITH x AS (SELECT 1) SELECT * FROM x", true}, {"SELECT 1; DELETE FROM users", false}, {"SELECT 1 --comment", false}, {"DELETE FROM x", false}, {"SELECT 1 FOR UPDATE", false}, {"SELECT * INTO new_table FROM old_table", false}, {"SELECT NEXT VALUE FOR seq", false}, {"EXPLAIN DELETE FROM users", false}, {"SELECT 1 /*abc*/", false}, {"", false}}
 	for _, v := range cases {
 		if got := ReadOnlySQL(v.sql); got != v.want {
 			t.Errorf("%q: got %v want %v", v.sql, got, v.want)

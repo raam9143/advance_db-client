@@ -29,7 +29,11 @@ func TestSQLServerLive(t *testing.T){
   status,body=call(t,h,"POST",endpoint+"/query",server.QueryRequest{SQL:q,ConfirmWrite:true})
   check(t,status,body,200)
  }
- status,body=call(t,h,"GET",endpoint+"/schema",nil);check(t,status,body,200)
+ // SQL Server SELECT INTO creates a table despite starting with SELECT.
+  // Reject it before sending SQL to the driver.
+  status,body=call(t,h,"POST",endpoint+"/query",server.QueryRequest{SQL:"SELECT * INTO dbo.adb_forbidden_copy FROM dbo."+name})
+  check(t,status,body,400)
+  status,body=call(t,h,"GET",endpoint+"/schema",nil);check(t,status,body,200)
  if !strings.Contains(string(body),name){t.Fatalf("schema missing table: %s",body)}
  p:="?schema=dbo&table="+name
  status,body=call(t,h,"GET",endpoint+"/describe"+p,nil);check(t,status,body,200)

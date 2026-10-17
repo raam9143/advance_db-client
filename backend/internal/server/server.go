@@ -608,7 +608,7 @@ func ReadOnlySQL(input string) bool {
 	if !(strings.HasPrefix(u, "SELECT ") || strings.HasPrefix(u, "WITH ") || strings.HasPrefix(u, "EXPLAIN ") || strings.HasPrefix(u, "SHOW ")) {
 		return false
 	}
-	for _, k := range []string{" INSERT ", " UPDATE ", " DELETE ", " DROP ", " CREATE ", " ALTER ", " TRUNCATE ", " GRANT ", " REVOKE ", " COPY ", " INTO OUTFILE", " FOR UPDATE", " PG_SLEEP(", " LOAD_FILE(", " DML ", " CALL ", " EXEC ", " EXECUTE "} {
+	for _, k := range []string{" INSERT ", " UPDATE ", " DELETE ", " DROP ", " CREATE ", " ALTER ", " TRUNCATE ", " GRANT ", " REVOKE ", " COPY ", " INTO OUTFILE", " INTO ", " NEXT VALUE FOR ", " FOR UPDATE", " PG_SLEEP(", " LOAD_FILE(", " DML ", " CALL ", " EXEC ", " EXECUTE "} {
 		if strings.Contains(" "+u+" ", k) {
 			return false
 		}
