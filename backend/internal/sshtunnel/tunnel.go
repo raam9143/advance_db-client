@@ -39,6 +39,10 @@ func Valid(c Config,databaseHost string,databasePort int)error{
  allowed:=false
  for _,item:=range strings.Split(os.Getenv("SSH_DB_TARGET_ALLOWLIST"),","){if strings.TrimSpace(item)==target{allowed=true;break}}
  if !allowed{return errors.New("SSH database port not allowlisted")}
+ bastion:=net.JoinHostPort(c.Host,strconv.Itoa(c.Port))
+ bastionAllowed:=false
+ for _,item:=range strings.Split(os.Getenv("SSH_BASTION_ALLOWLIST"),","){if strings.TrimSpace(item)==bastion{bastionAllowed=true;break}}
+ if !bastionAllowed{return errors.New("SSH bastion not allowlisted")}
  known:=os.Getenv("SSH_KNOWN_HOSTS_FILE")
  if !filepath.IsAbs(known){return errors.New("SSH_KNOWN_HOSTS_FILE must be an absolute path")}
  st,err:=os.Lstat(known);if err!=nil||!st.Mode().IsRegular(){return errors.New("SSH known hosts file missing or invalid")}

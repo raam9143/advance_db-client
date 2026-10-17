@@ -22,6 +22,7 @@ import (
 	"sync"
 	"time"
  "github.com/raam9143/advance_db-client/backend/internal/redisclient"
+ "github.com/raam9143/advance_db-client/backend/internal/sshtunnel"
  "github.com/raam9143/advance_db-client/backend/internal/mongoinspect"
  go_ora "github.com/sijms/go-ora/v2"
 )
@@ -43,6 +44,7 @@ type ConnectionRequest struct {
 	SSLMode  string `json:"sslMode"`
 	ReadOnly bool   `json:"readOnly"`
  ServiceMode string `json:"serviceMode,omitempty"`
+ Tunnel *sshtunnel.Config `json:"tunnel,omitempty"`
 }
 type PublicConnection struct {
 	ID       string `json:"id"`
@@ -58,6 +60,7 @@ type session struct {
 	db     *sql.DB
  redis *redisclient.Client
  mongo *mongoinspect.Client
+ tunnel *sshtunnel.Tunnel
 	expiry time.Time
 }
 type Server struct {
@@ -160,6 +163,7 @@ func (s *Server) cleanup() {
   if s.now().After(c.expiry) {
 			if c.db!=nil{_ = c.db.Close()}
    if c.mongo!=nil{c.mongo.Close()}
+   if c.tunnel!=nil{c.tunnel.Close()}
    delete(s.dbs, id)
 		}
 	}
@@ -195,16 +199,37 @@ func (s *Server) connect(w http.ResponseWriter, r *http.Request) {
 	c.Engine = strings.ToLower(strings.TrimSpace(c.Engine))
  if c.Engine=="redis"{s.connectRedis(w,r,c);return}
  if c.Engine=="mongo"{s.connectMongo(w,r,c);return}
+ originalHost:=c.Host
+ var tunnel *sshtunnel.Tunnel
+ if c.Tunnel!=nil{
+  if c.Engine!="postgres"&&c.Engine!="cockroach"&&c.Engine!="mysql"&&c.Engine!="mariadb"{
+   fail(w,400,"SSH tunneling currently supports PostgreSQL and MySQL protocols only");return
+  }
+  if (c.Engine=="postgres"||c.Engine=="cockroach")&&c.SSLMode!="disable"||
+     (c.Engine=="mysql"||c.Engine=="mariadb")&&c.SSLMode!="false"{
+    fail(w,400,"database TLS must be explicitly disabled for an SSH-local loopback target");return
+  }
+  ctx,cancel:=context.WithTimeout(r.Context(),12*time.Second)
+  defer cancel()
+  var host string
+  var port int
+  var err error
+  tunnel,host,port,err=sshtunnel.Open(ctx,*c.Tunnel,c.Host,c.Port)
+  if err!=nil{fail(w,400,err.Error());return}
+  c.Host=host;c.Port=port
+ }
  driver, dsn, err := ConfigDSN(c)
 	if err != nil {
-		fail(w, 400, err.Error())
-		return
-	}
-	db, err := sql.Open(driver, dsn)
+  if tunnel!=nil{tunnel.Close()}
+  fail(w, 400, err.Error())
+  return
+ }
+ db, err := sql.Open(driver, dsn)
 	if err != nil {
-		fail(w, 400, "unable to create driver")
-		return
-	}
+  if tunnel!=nil{tunnel.Close()}
+  fail(w, 400, "unable to create driver")
+  return
+ }
 	if c.Engine == "sqlite" || c.Engine == "clickhouse" {
 		db.SetMaxOpenConns(1)
 	} else {
@@ -216,12 +241,14 @@ func (s *Server) connect(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	if err = db.PingContext(ctx); err != nil {
 		db.Close()
+  if tunnel!=nil{tunnel.Close()}
 		fail(w, 400, "database connection failed")
 		return
 	}
 	if c.Engine == "sqlite" && c.ReadOnly && c.Database == ":memory:" {
 		if _, err = db.ExecContext(ctx, "PRAGMA query_only = ON"); err != nil {
 			db.Close()
+  if tunnel!=nil{tunnel.Close()}
 			fail(w, 400, "could not enable SQLite read-only mode")
 			return
 		}
@@ -229,15 +256,16 @@ func (s *Server) connect(w http.ResponseWriter, r *http.Request) {
 	var b [24]byte
 	if _, err = rand.Read(b[:]); err != nil {
 		db.Close()
+  if tunnel!=nil{tunnel.Close()}
 		fail(w, 500, "could not create connection id")
 		return
 	}
 	id := hex.EncodeToString(b[:])
 	if c.Engine=="clickhouse"{c.ReadOnly=true}
-    info := PublicConnection{ID: id, Name: c.Name, Engine: c.Engine, Database: c.Database, Host: c.Host, ReadOnly: c.ReadOnly}
+    info := PublicConnection{ID: id, Name: c.Name, Engine: c.Engine, Database: c.Database, Host: originalHost, ReadOnly: c.ReadOnly}
 	s.mu.Lock()
-	if len(s.dbs)>=24{s.mu.Unlock();db.Close();fail(w,429,"connection limit reached");return}
-  s.dbs[id] = &session{info: info, owner: requestOwner(r), db: db, expiry: s.now().Add(connectionTTL)}
+	if len(s.dbs)>=24{s.mu.Unlock();db.Close();if tunnel!=nil{tunnel.Close()};fail(w,429,"connection limit reached");return}
+  s.dbs[id] = &session{info: info, owner: requestOwner(r), db: db,tunnel:tunnel, expiry: s.now().Add(connectionTTL)}
 	s.mu.Unlock()
 	respond(w, 201, info)
 }
@@ -252,6 +280,7 @@ func (s *Server) disconnect(w http.ResponseWriter, id string, owner string) {
 	}
 	if c.db!=nil{_ = c.db.Close()}
  if c.mongo!=nil{c.mongo.Close()}
+ if c.tunnel!=nil{c.tunnel.Close()}
  w.WriteHeader(204)
 }
 func (s *Server) lookup(id, owner string) (*session, bool) {
