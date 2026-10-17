@@ -30,9 +30,9 @@ func runDatabase(t *testing.T,c server.ConnectionRequest){
  path:="/v1/connections/"+info.ID
  table:="adc_integration_qa"
  for _,stmt:=range []string{"DROP TABLE IF EXISTS "+table,"CREATE TABLE "+table+" (id INTEGER PRIMARY KEY, name VARCHAR(50))","INSERT INTO "+table+" (id,name) VALUES (1,'first'),(2,'second'),(3,'third')"}{
-  code,data=call(t,h,"POST",path+"/query",server.QueryRequest{SQL:stmt});check(t,code,data,200)
+  code,data=call(t,h,"POST",path+"/query",server.QueryRequest{SQL:stmt,ConfirmWrite:true});check(t,code,data,200)
  }
- t.Cleanup(func(){call(t,h,"POST",path+"/query",server.QueryRequest{SQL:"DROP TABLE IF EXISTS "+table})})
+ t.Cleanup(func(){call(t,h,"POST",path+"/query",server.QueryRequest{SQL:"DROP TABLE IF EXISTS "+table,ConfirmWrite:true})})
  code,data=call(t,h,"GET",path+"/schema",nil);check(t,code,data,200)
  if !bytes.Contains(data,[]byte(table)){t.Fatalf("schema missing table: %s",data)}
  schema:=c.Database;if c.Engine=="sqlite"{schema="main"};if c.Engine=="postgres"{schema="public"}
@@ -46,6 +46,9 @@ func runDatabase(t *testing.T,c server.ConnectionRequest){
  code,data=call(t,h,"GET",path+"/table"+q+"&limit=2&offset=2",nil);check(t,code,data,200)
  page=server.PageResult{};if err:=json.Unmarshal(data,&page);err!=nil{t.Fatal(err)}
  if page.RowCount!=1||page.NextOffset!=nil{t.Fatalf("invalid final page: %+v",page)}
+ code,data=call(t,h,"POST",path+"/explain",server.QueryRequest{SQL:"SELECT 1"});check(t,code,data,200)
+ code,data=call(t,h,"POST",path+"/export?format=json",server.QueryRequest{SQL:"SELECT 1"});check(t,code,data,200)
+ if !bytes.Contains(data,[]byte("columns")){t.Fatalf("JSON export malformed: %s",data)}
  code,data=call(t,h,"POST",path+"/export",server.QueryRequest{SQL:"SELECT '=2+2' AS f"});check(t,code,data,200)
  if !strings.Contains(string(data),"'=2+2"){t.Fatalf("CSV formula escaped incorrectly: %s",data)}
 }

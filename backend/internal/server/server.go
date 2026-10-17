@@ -84,7 +84,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	s.cleanup()
 	switch {
-	case r.URL.Path == "/v1/connections" && r.Method == "GET":
+	case r.URL.Path == "/v1/capabilities" && r.Method == "GET":
+        respond(w, 200, Capabilities())
+    case r.URL.Path == "/v1/connections" && r.Method == "GET":
 		s.list(w)
 	case r.URL.Path == "/v1/connections" && r.Method == "POST":
 		s.connect(w, r)
@@ -106,7 +108,10 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			s.query(w, r, parts[0])
 			return
 		}
-		if len(parts) == 2 && r.Method == "POST" && parts[1] == "export" {
+		if len(parts) == 2 && r.Method == "POST" && parts[1] == "explain" {
+        s.explain(w, r, parts[0]); return
+    }
+    if len(parts) == 2 && r.Method == "POST" && parts[1] == "export" {
 			s.export(w, r, parts[0])
 			return
 		}
@@ -263,6 +268,8 @@ func (s *Server) schema(w http.ResponseWriter, r *http.Request, id string) {
 type QueryRequest struct {
 	SQL            string `json:"sql"`
 	TimeoutSeconds int    `json:"timeoutSeconds"`
+    Parameters []any `json:"parameters,omitempty"`
+    ConfirmWrite bool `json:"confirmWrite,omitempty"`
 }
 type QueryResult struct {
 	Columns    []string `json:"columns"`
@@ -286,16 +293,19 @@ func (s *Server) run(ctx context.Context, c *session, q QueryRequest) (QueryResu
 	if q.TimeoutSeconds > 30 {
 		return out, errors.New("query timeout cannot exceed 30 seconds")
 	}
-	if c.info.ReadOnly && !ReadOnlySQL(q.SQL) {
+	args, err := ValidateParameters(q.Parameters)
+    if err != nil { return out, err }
+    if c.info.ReadOnly && !ReadOnlySQL(q.SQL) {
 		return out, errors.New("connection is read-only; only a single SELECT/WITH/EXPLAIN statement is allowed")
 	}
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(q.TimeoutSeconds)*time.Second)
 	defer cancel()
 	started := time.Now()
 	if !ReadOnlySQL(q.SQL) {
-		if os.Getenv("ALLOW_WRITE_QUERIES")!="true"{return out,errors.New("write queries are disabled by server policy")}
+		if !q.ConfirmWrite{return out,errors.New("write query requires explicit confirmation")}
+        if os.Getenv("ALLOW_WRITE_QUERIES")!="true"{return out,errors.New("write queries are disabled by server policy")}
   if c.info.ReadOnly{return out,errors.New("read-only connection cannot execute writes")}
-  result, err := c.db.ExecContext(ctx, q.SQL)
+  result, err := c.db.ExecContext(ctx, q.SQL, args...)
   fingerprint:=sha256.Sum256([]byte(q.SQL))
   log.Printf("db_write engine=%s connection_id=%s statement_sha256=%x success=%t",c.info.Engine,c.info.ID,fingerprint,err==nil)
 		if err != nil {
@@ -310,7 +320,7 @@ func (s *Server) run(ctx context.Context, c *session, q QueryRequest) (QueryResu
 		return out, errors.New("could not begin read-only transaction")
 	}
 	defer tx.Rollback()
-	rows, err := tx.QueryContext(ctx, q.SQL)
+	rows, err := tx.QueryContext(ctx, q.SQL, args...)
 	if err != nil {
 		return out, errors.New("SQL query failed")
 	}
@@ -383,7 +393,10 @@ func (s *Server) export(w http.ResponseWriter, r *http.Request, id string) {
 		fail(w, 400, err.Error())
 		return
 	}
-	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+	format := r.URL.Query().Get("format")
+    if format=="json"{w.Header().Set("Content-Disposition","attachment; filename=results.json");respond(w,200,result);return}
+    if format!=""&&format!="csv"{fail(w,400,"unsupported export format");return}
+    w.Header().Set("Content-Type", "text/csv; charset=utf-8")
 	w.Header().Set("Content-Disposition", "attachment; filename=results.csv")
 	w.WriteHeader(200)
 	writer := csv.NewWriter(w)
