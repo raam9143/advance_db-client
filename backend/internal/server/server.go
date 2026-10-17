@@ -50,6 +50,7 @@ type PublicConnection struct {
 }
 type session struct {
 	info   PublicConnection
+	owner  string
 	db     *sql.DB
 	expiry time.Time
 }
@@ -75,7 +76,10 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		fail(w, 401, "unauthorized")
 		return
 	}
-	if r.ContentLength > maxBody {
+	owner, err := s.owner(r)
+    if err != nil {fail(w,401,"invalid session scope");return}
+    r=r.WithContext(context.WithValue(r.Context(),scopeKey{},owner))
+    if r.ContentLength > maxBody {
 		fail(w, 413, "request too large")
 		return
 	}
@@ -87,7 +91,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case r.URL.Path == "/v1/capabilities" && r.Method == "GET":
         respond(w, 200, Capabilities())
     case r.URL.Path == "/v1/connections" && r.Method == "GET":
-		s.list(w)
+		s.list(w, r)
 	case r.URL.Path == "/v1/connections" && r.Method == "POST":
 		s.connect(w, r)
 	case strings.HasPrefix(r.URL.Path, "/v1/connections/"):
@@ -95,7 +99,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		parts := strings.Split(tail, "/")
 		if len(parts)>0 && (len(parts[0])!=48||strings.Trim(parts[0],"0123456789abcdef")!=""){fail(w,404,"connection not found");return}
   if len(parts) == 1 && r.Method == "DELETE" {
-			s.disconnect(w, parts[0])
+			s.disconnect(w, parts[0], requestOwner(r))
 			return
 		}
 		if len(parts) == 2 && r.Method == "GET" && parts[1] == "schema" {
@@ -130,12 +134,12 @@ func (s *Server) cleanup() {
 		}
 	}
 }
-func (s *Server) list(w http.ResponseWriter) {
+func (s *Server) list(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	a := make([]PublicConnection, 0, len(s.dbs))
 	for _, c := range s.dbs {
-		a = append(a, c.info)
+		if c.owner==requestOwner(r){a=append(a,c.info)}
 	}
 	respond(w, 200, a)
 }
@@ -200,16 +204,14 @@ func (s *Server) connect(w http.ResponseWriter, r *http.Request) {
 	info := PublicConnection{ID: id, Name: c.Name, Engine: c.Engine, Database: c.Database, Host: c.Host, ReadOnly: c.ReadOnly}
 	s.mu.Lock()
 	if len(s.dbs)>=24{s.mu.Unlock();db.Close();fail(w,429,"connection limit reached");return}
-  s.dbs[id] = &session{info: info, db: db, expiry: s.now().Add(connectionTTL)}
+  s.dbs[id] = &session{info: info, owner: requestOwner(r), db: db, expiry: s.now().Add(connectionTTL)}
 	s.mu.Unlock()
 	respond(w, 201, info)
 }
-func (s *Server) disconnect(w http.ResponseWriter, id string) {
+func (s *Server) disconnect(w http.ResponseWriter, id string, owner string) {
 	s.mu.Lock()
 	c, ok := s.dbs[id]
-	if ok {
-		delete(s.dbs, id)
-	}
+	if ok && c.owner==owner {delete(s.dbs,id)} else {ok=false}
 	s.mu.Unlock()
 	if !ok {
 		fail(w, 404, "connection not found")
@@ -218,17 +220,18 @@ func (s *Server) disconnect(w http.ResponseWriter, id string) {
 	c.db.Close()
 	w.WriteHeader(204)
 }
-func (s *Server) lookup(id string) (*session, bool) {
+func (s *Server) lookup(id, owner string) (*session, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	c, ok := s.dbs[id]
-	if ok {
-		c.expiry = s.now().Add(connectionTTL)
+	if ok && c.owner != owner {return nil,false}
+    if ok {
+        c.expiry = s.now().Add(connectionTTL)
 	}
 	return c, ok
 }
 func (s *Server) schema(w http.ResponseWriter, r *http.Request, id string) {
-	c, ok := s.lookup(id)
+	c, ok := s.lookup(id, requestOwner(r))
 	if !ok {
 		fail(w, 404, "connection not found")
 		return
@@ -358,7 +361,7 @@ func (s *Server) run(ctx context.Context, c *session, q QueryRequest) (QueryResu
 	return out, nil
 }
 func (s *Server) query(w http.ResponseWriter, r *http.Request, id string) {
-	c, ok := s.lookup(id)
+	c, ok := s.lookup(id, requestOwner(r))
 	if !ok {
 		fail(w, 404, "connection not found")
 		return
@@ -375,7 +378,7 @@ func (s *Server) query(w http.ResponseWriter, r *http.Request, id string) {
 	respond(w, 200, out)
 }
 func (s *Server) export(w http.ResponseWriter, r *http.Request, id string) {
-	c, ok := s.lookup(id)
+	c, ok := s.lookup(id, requestOwner(r))
 	if !ok {
 		fail(w, 404, "connection not found")
 		return

@@ -22,3 +22,6 @@ This is a web-first rewrite foundation, **not yet a complete port** of t8y2/dbx.
 - Exports are capped at 1,000 rows and can be truncated.
 - PostgreSQL uses `$1` placeholders; MySQL and SQLite use `?`. Query parameters accept scalars only.
 - Saved SQL and recent queries are browser-local and may contain sensitive SQL. Never store secrets in query text.
+
+## Browser session isolation
+New login cookies include a random nonce. The Next.js proxy sends HMAC-proven, SHA-256 scoped identities to the Go API, partitioning in-memory connections by login session. Direct bearer-API and CLI/MCP requests use a separate service namespace. This does not implement per-user RBAC, admin role separation, durable credential isolation, or enterprise SSO. Never expose the Go API token to untrusted clients.

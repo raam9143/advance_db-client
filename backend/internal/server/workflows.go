@@ -53,7 +53,7 @@ func explainStatement(engine,query string)(string,error) {
  }
 }
 func (s *Server) explain(w http.ResponseWriter,r *http.Request,id string) {
- c,ok:=s.lookup(id)
+ c,ok:=s.lookup(id, requestOwner(r))
  if !ok{fail(w,http.StatusNotFound,"connection not found");return}
  var q QueryRequest
  if !decode(w,r,&q){return}

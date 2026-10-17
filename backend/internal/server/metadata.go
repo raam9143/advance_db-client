@@ -35,7 +35,7 @@ func parsePage(q url.Values)(int,int,error){
  return limit,offset,nil
 }
 func (s *Server) tablePage(w http.ResponseWriter,r *http.Request,id string){
- c,ok:=s.lookup(id);if !ok{fail(w,404,"connection not found");return}
+ c,ok:=s.lookup(id, requestOwner(r));if !ok{fail(w,404,"connection not found");return}
  limit,offset,err:=parsePage(r.URL.Query());if err!=nil{fail(w,400,err.Error());return}
  name,err:=qualifiedName(c.info.Engine,r.URL.Query().Get("schema"),r.URL.Query().Get("table"));if err!=nil{fail(w,400,err.Error());return}
  query:=fmt.Sprintf("SELECT * FROM %s LIMIT %d OFFSET %d",name,limit+1,offset)
@@ -54,7 +54,7 @@ func (s *Server) tablePage(w http.ResponseWriter,r *http.Request,id string){
  if rows.Err()!=nil{fail(w,500,"table read failed");return};respond(w,200,out)
 }
 func (s *Server) describe(w http.ResponseWriter,r *http.Request,id string){
- c,ok:=s.lookup(id);if !ok{fail(w,404,"connection not found");return}
+ c,ok:=s.lookup(id, requestOwner(r));if !ok{fail(w,404,"connection not found");return}
  schema,table:=r.URL.Query().Get("schema"),r.URL.Query().Get("table")
  if _,err:=qualifiedName(c.info.Engine,schema,table);err!=nil{fail(w,400,err.Error());return}
  ctx,cancel:=context.WithTimeout(r.Context(),15*time.Second);defer cancel()

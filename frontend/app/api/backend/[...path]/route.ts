@@ -1,4 +1,5 @@
-import { authorized, sameOrigin } from '@/lib/auth';
+import { COOKIE_NAME, authorized, sameOrigin, sessionScope } from '@/lib/auth';
+import { cookies } from 'next/headers';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
 const reply=(message:string,status:number)=>Response.json({error:message},{status});
@@ -19,7 +20,8 @@ async function proxy(req:Request, {params}:{params:Promise<{path:string[]}>}):Pr
  const input=req.method==='POST' ? await req.text() : undefined;
  if (input && input.length>1_000_000) return reply('Request too large',413);
  try {
-  const upstream=await fetch(`${base}${path}${new URL(req.url).search}`,{method:req.method,headers:{Authorization:`Bearer ${token}`, ...(input?{'Content-Type':'application/json'}:{})},body:input,cache:'no-store',signal:AbortSignal.timeout(33000)});
+  const scope=sessionScope((await cookies()).get(COOKIE_NAME)!.value,token);
+  const upstream=await fetch(`${base}${path}${new URL(req.url).search}`,{method:req.method,headers:{Authorization:`Bearer ${token}`,'X-ADB-Session-ID':scope.id,'X-ADB-Session-Proof':scope.proof, ...(input?{'Content-Type':'application/json'}:{})},body:input,cache:'no-store',signal:AbortSignal.timeout(33000)});
   const format=new URL(req.url).searchParams.get('format');
   const isExport=path.endsWith('/export')&&upstream.ok;
   const isCSV=isExport&&format!=='json';
