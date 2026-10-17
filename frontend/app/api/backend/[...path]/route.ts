@@ -13,6 +13,7 @@ async function proxy(req:Request, {params}:{params:Promise<{path:string[]}>}):Pr
   || path==='/v1/capabilities' && req.method==='GET'
   || path==='/v1/connections' && ['GET','POST'].includes(req.method)
   || /^\/v1\/backups\/[a-f0-9]{48}$/.test(path)&&['GET','DELETE'].includes(req.method)
+  || /^\/v1\/connections\/[a-f0-9]{48}\/mongo\/find$/.test(path)&&req.method==='POST'
   || /^\/v1\/connections\/[a-f0-9]{48}\/backup$/.test(path)&&req.method==='POST'
   || /^\/v1\/connections\/[a-f0-9]{48}$/.test(path)&&req.method==='DELETE'
   || /^\/v1\/connections\/[a-f0-9]{48}\/(schema|describe|table)$/.test(path)&&req.method==='GET'

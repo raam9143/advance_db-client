@@ -18,6 +18,12 @@ jobs:
           - 5432:5432
         options: >-
           --health-cmd "pg_isready -U adb -d adb" --health-interval 10s --health-timeout 5s --health-retries 10
+      mongo:
+        image: mongo:7.0
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval \"db.adminCommand('ping').ok\"" --health-interval 10s --health-timeout 5s --health-retries 20
       redis:
         image: redis:7.4-alpine
         ports:
@@ -39,6 +45,8 @@ jobs:
       TEST_POSTGRES_HOST: 127.0.0.1
       TEST_MYSQL_HOST: 127.0.0.1
       TEST_REDIS_HOST: 127.0.0.1
+      TEST_MONGO_HOST: 127.0.0.1
+      MONGO_ALLOW_PLAINTEXT_LOOPBACK: 'true'
       REDIS_ALLOW_PLAINTEXT_LOOPBACK: 'true'
     defaults:
       run:
