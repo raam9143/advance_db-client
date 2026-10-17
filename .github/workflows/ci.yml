@@ -41,12 +41,11 @@ jobs:
         with:
           go-version-file: backend/go.mod
           cache: false
-      - name: Resolve Go dependencies and emit reproducible checksums
+      - name: Verify pinned Go dependencies
         run: |
-          go mod tidy
-          echo '===ADB_GO_SUM_BEGIN==='
-          cat go.sum
-          echo '===ADB_GO_SUM_END==='
+          go mod download
+          go mod verify
+          go mod tidy -diff
       - run: go test -race ./...
       - run: go vet ./...
       - run: go build ./cmd/api
