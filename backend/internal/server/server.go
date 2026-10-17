@@ -90,6 +90,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case r.URL.Path == "/v1/capabilities" && r.Method == "GET":
         respond(w, 200, Capabilities())
+    case r.URL.Path == "/v1/schema/diff" && r.Method == "POST":
+        s.diffSchema(w,r)
     case r.URL.Path == "/v1/connections" && r.Method == "GET":
 		s.list(w, r)
 	case r.URL.Path == "/v1/connections" && r.Method == "POST":

@@ -25,3 +25,6 @@ This is a web-first rewrite foundation, **not yet a complete port** of t8y2/dbx.
 
 ## Browser session isolation
 New login cookies include a random nonce. The Next.js proxy sends HMAC-proven, SHA-256 scoped identities to the Go API, partitioning in-memory connections by login session. Direct bearer-API and CLI/MCP requests use a separate service namespace. This does not implement per-user RBAC, admin role separation, durable credential isolation, or enterprise SSO. Never expose the Go API token to untrusted clients.
+
+## Dry-run schema difference
+Authenticated `POST /v1/schema/diff` accepts two table metadata snapshots in `{"before":...,"after":...}` format returned by the `describe` endpoint. It reports deterministic column-level differences with destructive flags and `executable:false`. No SQL is generated or applied. It is not a tested production migration engine.
