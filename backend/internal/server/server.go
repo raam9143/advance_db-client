@@ -60,11 +60,12 @@ type Server struct {
 	token string
 	mu    sync.Mutex
 	dbs   map[string]*session
+ backups map[string]*backupSnapshot
 	now   func() time.Time
 }
 
 func New(token string) *Server {
-	return &Server{token: token, dbs: map[string]*session{}, now: time.Now}
+	return &Server{token: token, dbs: map[string]*session{}, backups:map[string]*backupSnapshot{},now: time.Now}
 }
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
@@ -90,7 +91,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	s.cleanup()
 	switch {
-	case r.URL.Path == "/v1/capabilities" && r.Method == "GET":
+	case strings.HasPrefix(r.URL.Path,"/v1/backups/")&&(r.Method=="GET"||r.Method=="DELETE"):
+        s.backupFile(w,r,strings.TrimPrefix(r.URL.Path,"/v1/backups/"))
+    case r.URL.Path == "/v1/capabilities" && r.Method == "GET":
         respond(w, 200, Capabilities())
     case r.URL.Path == "/v1/schema/diff" && r.Method == "POST":
         s.diffSchema(w,r)
@@ -106,7 +109,10 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			s.disconnect(w, parts[0], requestOwner(r))
 			return
 		}
-		if len(parts) == 2 && r.Method=="POST" && parts[1]=="redis" {
+		if len(parts)==2 && r.Method=="POST" && parts[1]=="backup" {
+    s.createBackup(w,r,parts[0]);return
+  }
+  if len(parts) == 2 && r.Method=="POST" && parts[1]=="redis" {
    s.inspectRedis(w,r,parts[0]);return
   }
   if len(parts)==2 {
@@ -137,10 +143,13 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 func (s *Server) cleanup() {
-	s.mu.Lock()
+ s.mu.Lock()
 	defer s.mu.Unlock()
-	for id, c := range s.dbs {
-		if s.now().After(c.expiry) {
+	for id,b:=range s.backups{
+  if s.now().After(b.expires){delete(s.backups,id);_ = os.RemoveAll(filepath.Dir(b.path))}
+ }
+ for id, c := range s.dbs {
+  if s.now().After(c.expiry) {
 			if c.db!=nil{_ = c.db.Close()}
    delete(s.dbs, id)
 		}

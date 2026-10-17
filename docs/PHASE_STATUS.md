@@ -33,3 +33,6 @@ Authenticated `POST /v1/schema/diff` accepts two table metadata snapshots in `{"
 
 ## ClickHouse read-only HTTPS adapter
 Verified TLS 1.2+, Basic authentication, readonly=2, bounded JSON responses, named ClickHouse parameter placeholders ({p1:String}), table and column browsing. No writes, SQL transactions, native protocol, EXPLAIN, or independently validated live database behavior. Use least-privilege credentials.
+
+## Opt-in SQLite snapshot download
+An authenticated SQLite connection can create a database snapshot with `POST /v1/connections/{id}/backup` and `{"confirmBackup":true}`. Requires a dedicated absolute, owner-private `SQLITE_BACKUP_DIR` (0700). SQLite `VACUUM INTO` writes the snapshot in a generated private directory. Maximum 128 MiB; ten outstanding snapshots globally; session-isolated IDs expire after 30 minutes. Download with `GET /v1/backups/{id}` and delete with `DELETE /v1/backups/{id}`. **No restore endpoint exists**, and this is not a full disaster-recovery solution. Snapshots are disabled by default.
