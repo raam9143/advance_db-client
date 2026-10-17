@@ -1,5 +1,6 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { cookies } from 'next/headers';
+import { sessionActive } from '@/lib/session-store.mjs';
 
 export const COOKIE_NAME = 'adb_session';
 const LIFE = 8 * 60 * 60;
@@ -28,7 +29,12 @@ export function parseSession(value?:string):Session|null{
  return {role:parts[3] as Role,principal:parts[4],expires,nonce:parts[2]};
 }
 export function verifySession(value?:string):boolean{return parseSession(value)!==null;}
-export async function authorized():Promise<boolean>{return verifySession((await cookies()).get(COOKIE_NAME)?.value)}
+export async function authorized():Promise<boolean>{
+ const cookie=(await cookies()).get(COOKIE_NAME)?.value;
+ if(!verifySession(cookie))return false;
+ if(process.env.OIDC_REQUIRED==='true'&&parseSession(cookie)?.principal==='local-admin')return false;
+ try{return await sessionActive(cookie)}catch{return false}
+}
 export function validPassword(submitted:string):boolean{
  const wanted=process.env.APP_PASSWORD;
  if(!wanted||wanted.length<12)throw Error('APP_PASSWORD must be at least 12 characters');

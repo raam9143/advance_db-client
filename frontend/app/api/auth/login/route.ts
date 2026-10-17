@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { COOKIE_NAME, issueSession, sameOrigin, validPassword } from '@/lib/auth';
 import { totpEnabled, verifyTotp } from '@/lib/totp.mjs';
+import { consumeOTP, persistSession } from '@/lib/session-store.mjs';
 export const runtime = 'nodejs';
 const attempts = new Map<string, { count: number; until: number }>();
 export async function POST(req: Request) {
@@ -24,8 +25,15 @@ export async function POST(req: Request) {
   attempts.set(ip,{count:n,until:now+15*60*1000});
   return NextResponse.json({error:'Invalid credentials'},{status:401});
  }
+ if(totpEnabled()){
+  try{
+   if(!await consumeOTP(process.env.APP_TOTP_SECRET!,otp as string))return NextResponse.json({error:'Authenticator code already used'},{status:401});
+  }catch{return NextResponse.json({error:'Session store unavailable'},{status:503})}
+ }
  attempts.delete(ip);
+ const value=issueSession();
+ try{await persistSession(value)}catch{return NextResponse.json({error:'Session store unavailable'},{status:503})}
  const res=NextResponse.json({ok:true});
- res.cookies.set(COOKIE_NAME,issueSession(),{httpOnly:true,secure:process.env.NODE_ENV==='production',sameSite:'strict',path:'/',maxAge:8*60*60});
+ res.cookies.set(COOKIE_NAME,value,{httpOnly:true,secure:process.env.NODE_ENV==='production',sameSite:'strict',path:'/',maxAge:8*60*60});
  return res;
 }

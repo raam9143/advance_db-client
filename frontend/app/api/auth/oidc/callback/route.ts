@@ -1,6 +1,7 @@
 import { NextRequest,NextResponse } from 'next/server';
 import { oidcConfig,verifyFlow,discovery,exchangeCode,validateIdentity } from '@/lib/oidc.mjs';
 import { COOKIE_NAME,issueSession } from '@/lib/auth';
+import { persistSession } from '@/lib/session-store.mjs';
 export const runtime='nodejs';
 export async function GET(req:NextRequest){
  try{
@@ -12,8 +13,10 @@ export async function GET(req:NextRequest){
   const doc=await discovery(config);
   const token=await exchangeCode(config,doc,url.searchParams.get('code')||'',flow);
   const identity=await validateIdentity(config,doc,token,flow);
+  const value=issueSession(identity.role,identity.principal);
+  await persistSession(value);
   const r=NextResponse.redirect(new URL('/',url.origin));
-  r.cookies.set(COOKIE_NAME,issueSession(identity.role,identity.principal),{httpOnly:true,secure:true,sameSite:'strict',path:'/',maxAge:28800});
+  r.cookies.set(COOKIE_NAME,value,{httpOnly:true,secure:true,sameSite:'strict',path:'/',maxAge:28800});
   r.cookies.set('adb_oidc_flow','',{path:'/api/auth/oidc',maxAge:0,secure:true});
   r.headers.set('Cache-Control','no-store');
   return r;
