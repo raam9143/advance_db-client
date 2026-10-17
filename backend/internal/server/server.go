@@ -112,6 +112,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
         s.backupFile(w,r,strings.TrimPrefix(r.URL.Path,"/v1/backups/"))
     case r.URL.Path == "/v1/capabilities" && r.Method == "GET":
         respond(w, 200, Capabilities())
+    case r.URL.Path=="/v1/ai/review"&&r.Method=="POST":
+    s.reviewAI(w,r)
     case r.URL.Path == "/v1/schema/diff" && r.Method == "POST":
         s.diffSchema(w,r)
     case r.URL.Path == "/v1/connections" && r.Method == "GET":
