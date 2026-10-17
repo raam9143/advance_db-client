@@ -19,3 +19,14 @@
 .query-parameters label{flex:0 0 auto;font-weight:600}.query-parameters input{flex:1;min-width:60px;border:1px solid #94a3b8;border-radius:5px;padding:.35rem .55rem;background:transparent;color:inherit;font:inherit}
 .saved-query-list{display:grid;gap:3px;padding:0 12px 10px}.saved-query-list button{padding:.4rem .6rem;border:0;text-align:left;background:transparent;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;border-radius:5px}.saved-query-list button:hover{background:rgba(127,127,127,.15)}
 @media(max-width:700px){.query-parameters{flex-wrap:wrap}.query-parameters label{width:100%}.query-footer .action-row{flex-wrap:wrap}}
+
+/* Protocol-aware Redis inspector */
+.redis-inspector{padding:1rem 1.25rem;margin-bottom:1rem}
+.redis-inspector p{color:var(--muted,#64748b);font-size:.85rem;margin:.8rem 0}
+.redis-fields{display:flex;flex-wrap:wrap;gap:.75rem;align-items:end}
+.redis-fields label{display:flex;flex:1 1 160px;flex-direction:column;gap:.35rem;font-size:.8rem;font-weight:600}
+.redis-fields input,.redis-fields select{padding:.55rem;border:1px solid #94a3b8;border-radius:6px;background:transparent;color:inherit;min-width:0;width:100%}
+.redis-fields button{min-height:40px}
+.redis-result{margin-top:1rem;padding:1rem;background:rgba(127,127,127,.08);border-radius:8px}
+.redis-result pre{white-space:pre-wrap;word-break:break-word;max-height:400px;overflow:auto;font-size:.85rem}
+.redis-engine-hidden{display:none!important}

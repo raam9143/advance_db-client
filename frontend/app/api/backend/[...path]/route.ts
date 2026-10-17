@@ -14,7 +14,7 @@ async function proxy(req:Request, {params}:{params:Promise<{path:string[]}>}):Pr
   || path==='/v1/connections' && ['GET','POST'].includes(req.method)
   || /^\/v1\/connections\/[a-f0-9]{48}$/.test(path)&&req.method==='DELETE'
   || /^\/v1\/connections\/[a-f0-9]{48}\/(schema|describe|table)$/.test(path)&&req.method==='GET'
-  || /^\/v1\/connections\/[a-f0-9]{48}\/(query|export|explain)$/.test(path)&&req.method==='POST';
+  || /^\/v1\/connections\/[a-f0-9]{48}\/(query|export|explain|redis)$/.test(path)&&req.method==='POST';
  if (!allowed) return reply('Not found',404);
  const token=process.env.API_TOKEN,base=process.env.GO_API_URL||'http://127.0.0.1:8080';
  if (!token || !base.startsWith('http')) return reply('API not configured',503);

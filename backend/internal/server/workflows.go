@@ -23,6 +23,7 @@ func Capabilities() []EngineCapability {
  {Engine:"mariadb",Protocol:"mysql",Schema:true,Explain:true,Parameters:true,CSVExport:true,JSONExport:true},
  {Engine:"sqlite",Protocol:"sqlite",Schema:true,Explain:true,Parameters:true,CSVExport:true,JSONExport:true},
  {Engine:"clickhouse",Protocol:"https",Schema:true,Explain:false,Parameters:true,CSVExport:true,JSONExport:true},
+ {Engine:"redis",Protocol:"redis-resp2",Schema:false,Explain:false,Parameters:false,CSVExport:false,JSONExport:false},
  }
 }
 func ValidateParameters(params []any) ([]any,error) {
