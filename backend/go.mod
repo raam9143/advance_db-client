@@ -1,14 +1,14 @@
 module github.com/raam9143/advance_db-client/backend
 
-go 1.23
+go 1.26.0
 
 require (
 	github.com/go-sql-driver/mysql v1.8.1
-	github.com/jackc/pgx/v5 v5.7.2
+	github.com/jackc/pgx/v5 v5.9.2
 	github.com/microsoft/go-mssqldb v1.8.2
 	github.com/sijms/go-ora/v2 v2.9.0
-	go.mongodb.org/mongo-driver v1.17.6
-	golang.org/x/crypto v0.31.0
+	go.mongodb.org/mongo-driver v1.17.7
+	golang.org/x/crypto v0.56.0
 	modernc.org/sqlite v1.33.1
 )
 
@@ -34,7 +34,7 @@ require (
 	github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78 // indirect
 	golang.org/x/sync v0.10.0 // indirect
 	golang.org/x/sys v0.28.0 // indirect
-	golang.org/x/text v0.21.0 // indirect
+	golang.org/x/text v0.43.0 // indirect
 	modernc.org/gc/v3 v3.0.0-20240107210532-573471604cb6 // indirect
 	modernc.org/libc v1.55.3 // indirect
 	modernc.org/mathutil v1.6.0 // indirect

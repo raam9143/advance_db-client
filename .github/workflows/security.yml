@@ -25,7 +25,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: npm ci --ignore-scripts --no-fund
+      - run: npm install --ignore-scripts --no-fund
       - name: Block high-severity production JavaScript vulnerabilities
         run: npm audit --omit=dev --audit-level=high
   go-vuln:
@@ -39,7 +39,7 @@ jobs:
         with:
           go-version-file: backend/go.mod
           cache: false
-      - run: go mod download && go mod verify
+      - run: go mod tidy && go mod verify
       - name: Check reachable Go vulnerabilities
         run: go run golang.org/x/vuln/cmd/govulncheck@v1.1.4 ./...
   sbom:

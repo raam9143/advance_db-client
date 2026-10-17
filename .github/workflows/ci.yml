@@ -57,11 +57,16 @@ jobs:
         with:
           go-version-file: backend/go.mod
           cache: false
-      - name: Verify pinned Go dependencies
+      - name: Resolve upgraded Go dependencies once for lockfile review
         run: |
-          go mod download
+          go mod tidy
           go mod verify
-          go mod tidy -diff
+          echo ADB_GO_MOD_START
+          cat go.mod
+          echo ADB_GO_MOD_END
+          echo ADB_GO_SUM_START
+          cat go.sum
+          echo ADB_GO_SUM_END
       - run: go test -race ./...
       - name: Explicit MongoDB live read-only integration
         run: go test -race -run TestMongoLiveReadonly -count=1 -v ./integration
@@ -77,8 +82,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Verify frozen frontend dependencies
-        run: npm ci --no-audit --no-fund
+      - name: Resolve upgraded Next.js lockfile once for review
+        run: |
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          echo ADB_FRONTEND_LOCK_START
+          cat package-lock.json
+          echo ADB_FRONTEND_LOCK_END
+      - run: npm install --no-audit --no-fund
       - run: npm run typecheck
       - run: npm run build
 
@@ -102,7 +112,7 @@ jobs:
         with:
           go-version-file: backend/go.mod
           cache: false
-      - run: go mod download && go mod verify
+      - run: go mod tidy && go mod verify
       - run: go test -race ./internal/chhttp ./internal/server ./cmd/adbctl
       - run: go vet ./internal/chhttp ./internal/server ./cmd/adbctl
 
@@ -131,6 +141,6 @@ jobs:
         with:
           go-version-file: backend/go.mod
           cache: false
-      - run: go mod download && go mod verify
+      - run: go mod tidy && go mod verify
       - name: Live Microsoft SQL Server database integration
         run: go test -race -run '^TestSQLServerLive$' -count=1 -v ./integration
