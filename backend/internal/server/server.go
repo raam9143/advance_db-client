@@ -22,6 +22,7 @@ import (
 	"sync"
 	"time"
  "github.com/raam9143/advance_db-client/backend/internal/redisclient"
+ go_ora "github.com/sijms/go-ora/v2"
 )
 
 const (
@@ -40,6 +41,7 @@ type ConnectionRequest struct {
 	Password string `json:"password"`
 	SSLMode  string `json:"sslMode"`
 	ReadOnly bool   `json:"readOnly"`
+ ServiceMode string `json:"serviceMode,omitempty"`
 }
 type PublicConnection struct {
 	ID       string `json:"id"`
@@ -343,12 +345,17 @@ func (s *Server) run(ctx context.Context, c *session, q QueryRequest) (QueryResu
 		out.DurationMS = time.Since(started).Milliseconds()
 		return out, nil
 	}
-	tx, err := c.db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
-	if err != nil {
-		return out, errors.New("could not begin read-only transaction")
-	}
-	defer tx.Rollback()
-	rows, err := tx.QueryContext(ctx, q.SQL, args...)
+	var rows *sql.Rows
+ if c.info.Engine=="sqlserver"||c.info.Engine=="oracle" {
+  // Vendor drivers may not support read-only transactions; use DB-level read-only roles.
+  rows,err=c.db.QueryContext(ctx,q.SQL,args...)
+ }else{
+  var tx *sql.Tx
+  tx,err=c.db.BeginTx(ctx,&sql.TxOptions{ReadOnly:true})
+  if err!=nil{return out,errors.New("could not begin read-only transaction")}
+  defer tx.Rollback()
+  rows,err=tx.QueryContext(ctx,q.SQL,args...)
+ }
 	if err != nil {
 		return out, errors.New("SQL query failed")
 	}
@@ -456,8 +463,12 @@ func fail(w http.ResponseWriter, status int, message string) {
 }
 func schemaSQL(engine string) (string, error) {
 	switch strings.ToLower(engine) {
-	case "postgres","cockroach":
-		return "SELECT table_schema, table_name FROM information_schema.tables WHERE table_schema NOT IN ('pg_catalog','information_schema') AND table_type='BASE TABLE' ORDER BY 1,2", nil
+	case "sqlserver":
+  return "SELECT s.name,t.name FROM sys.tables t JOIN sys.schemas s ON t.schema_id=s.schema_id WHERE t.is_ms_shipped=0 ORDER BY s.name,t.name",nil
+ case "oracle":
+  return "SELECT owner,table_name FROM all_tables WHERE owner=USER ORDER BY owner,table_name",nil
+ case "postgres","cockroach":
+  return "SELECT table_schema, table_name FROM information_schema.tables WHERE table_schema NOT IN ('pg_catalog','information_schema') AND table_type='BASE TABLE' ORDER BY 1,2", nil
 	case "mysql","mariadb":
 		return "SELECT table_schema, table_name FROM information_schema.tables WHERE table_schema=DATABASE() AND table_type='BASE TABLE' ORDER BY 1,2", nil
 	case "clickhouse":
@@ -515,8 +526,24 @@ func ConfigDSN(c ConnectionRequest) (driver, dsn string, err error) {
 	if c.Port < 1 || c.Port > 65535 {
 		return "", "", errors.New("invalid database port")
 	}
-	switch engine {
-	case "clickhouse":
+switch engine {
+ case "sqlserver":
+  if c.ServiceMode!=""{return "","",errors.New("serviceMode is Oracle-only")}
+  mode:=c.SSLMode;if mode==""{mode="verify-full"}
+  if mode!="require"&&mode!="verify-full"{return "","",errors.New("SQL Server requires verified TLS")}
+  u:=&url.URL{Scheme:"sqlserver",Host:net.JoinHostPort(c.Host,fmt.Sprint(c.Port)),User:url.UserPassword(c.User,c.Password)}
+  values:=url.Values{};values.Set("database",c.Database);values.Set("encrypt","true");values.Set("TrustServerCertificate","false");values.Set("dial timeout","8")
+  u.RawQuery=values.Encode()
+  return "sqlserver",u.String(),nil
+ case "oracle":
+  mode:=c.SSLMode;if mode==""{mode="verify-full"}
+  if mode!="require"&&mode!="verify-full"{return "","",errors.New("Oracle requires certificate-verified TCPS")}
+  if c.ServiceMode!=""&&c.ServiceMode!="service"&&c.ServiceMode!="sid"{return "","",errors.New("invalid Oracle serviceMode")}
+  options:=map[string]string{"SSL":"true","SSL VERIFY":"true","CONNECTION TIMEOUT":"8"}
+  service:=c.Database
+  if c.ServiceMode=="sid"{options["SID"]=c.Database;service=""}
+  return "oracle",go_ora.BuildUrl(c.Host,c.Port,service,c.User,c.Password,options),nil
+ case "clickhouse":
 		if c.SSLMode!="" && c.SSLMode!="require" && c.SSLMode!="verify-full" {return "","",errors.New("ClickHouse requires verified TLS")}
 		u:=&url.URL{Scheme:"https",Host:net.JoinHostPort(c.Host,fmt.Sprint(c.Port)),Path:"/",User:url.UserPassword(c.User,c.Password)}
 		params:=url.Values{};params.Set("database",c.Database);u.RawQuery=params.Encode()
@@ -548,7 +575,7 @@ func ConfigDSN(c ConnectionRequest) (driver, dsn string, err error) {
 		}
 		return "mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s?parseTime=true&tls=%s&timeout=8s&readTimeout=30s&writeTimeout=30s", c.User, c.Password, net.JoinHostPort(c.Host, fmt.Sprint(c.Port)), url.PathEscape(c.Database), tls), nil
 	default:
-		return "", "", errors.New("supported engines: postgres, cockroach, mysql, mariadb, sqlite, clickhouse")
+		return "", "", errors.New("supported engines: postgres, cockroach, mysql, mariadb, sqlite, clickhouse, sqlserver, oracle")
 	}
 }
 
