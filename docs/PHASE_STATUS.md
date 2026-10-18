@@ -52,3 +52,10 @@ Implemented standalone MongoDB Go v1 driver (v1.17.6), schema/collection browsin
 
 ## Consent-gated AI SQL review
 Opt-in external OpenAI Responses API review added. SQL single-statement checks and string-literal redaction precede outbound requests; no rows/credentials forwarded, no SQL execution, and no generated query can be applied automatically. Mock HTTP tests are in CI. Requires a live API key and schema-sharing approval for production validation. See [AI review](AI_REVIEW.md).
+
+## Phase 6 hardening — 18 October 2026
+- Found and eliminated frontend runtime vulnerability findings by replacing npm-bearing runtime with the non-root, Debian 13 distroless Node image. The resulting baseline [security workflow 39089048555](https://github.com/raam9143/advance_db-client/actions/runs/39089048555) passed npm audit, Go vulnerabilities, SBOM and both container-image scans. Later vault and telemetry commits require their own new scan results before acceptance.
+- Added encrypted operator-managed AES-256-GCM profile store and offline key rotation (`backend/cmd/adb-vault`), plus admin-only read-only `credentialRef` connection resolution. Tests cover missing/incorrect keys, record tampering, permission checks and read-only/vs-viewer roles. See [Vault](CREDENTIAL_VAULT.md).
+- Added shared Redis local-admin lockout and credential-store fail-closed errors, instead of trusting spoofable `X-Forwarded-For` headers for throttling. Production requires `SESSION_REDIS_REQUIRED=true` and externally managed TLS Redis.
+- Added restricted Prometheus exposition and operator alert rules; no distributed tracing or real alert delivery exercise has been completed. See [Observability](OBSERVABILITY.md).
+- Remaining Phase 6 blockers: production IdP authentication/MFA offboarding tests, externally reviewed RBAC/threat model and credential custody, distributed load/failover tests, immutable/off-host audit ingestion, secrets rotation across replicas, branch protections/review requirements, real alerting and DR validation. **Do not close Phase 6 solely on green CI.**

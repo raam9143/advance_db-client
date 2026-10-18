@@ -42,3 +42,9 @@
 
 ## Release acceptance
 Phase 6 closes only after the repository owner can demonstrate all requirements from issue #6: enterprise authentication/RBAC, distributed session handling, key rotation, effective durable audit, observable SLOs, vulnerability/SBOM/license/image gates, E2E/DR/performance tests, and signed/reviewed release. Open items must never be disguised as completed by changing documentation alone.
+
+## Encrypted database profiles
+Use [Credential Vault](CREDENTIAL_VAULT.md) to provision AES-GCM profiles via stdin, connect using admin-only profile references and rotate records offline. Secrets are encrypted at rest, but key material still requires external custody (KMS/secrets manager). Multiple Go processes must not modify the same file simultaneously. A full external KMS migration and compliance review remain unresolved.
+
+## Prometheus monitoring
+An admin-only `/v1/metrics/prometheus` endpoint and [alert rules](../deploy/monitoring/alerts.yml) have been added. These are in-process counters and are not a deployed Prometheus/Alertmanager stack. Verify scrape authorization, alert delivery and SLO calculations in the actual environment before release.

@@ -35,3 +35,9 @@ Set `APP_REQUIRE_TOTP=true` and `APP_TOTP_SECRET` to a securely generated Base32
 - [Offline restore](SQLITE_RESTORE.md): a maintenance-only SQLite CLI verifies database health and retains the original. All writers must be shut down. It does not restore other database engines.
 - Optional TOTP under `APP_REQUIRE_TOTP=true` and `APP_TOTP_SECRET`. Verify the provisioning and replay counter limitations; production OIDC/SSO/RBAC is still missing.
 - [AI review](AI_REVIEW.md): requests are disabled by default, require user consent, and contain sanitized SQL text only. Table/column identifiers can still reveal organizational structure.
+
+### Credential encryption and rotation
+The admin-only encrypted profile store is opt-in. Read [the credential vault runbook](CREDENTIAL_VAULT.md) for AES-256-GCM storage, owner-private filesystem restrictions, profile-bound integrity tags, and the offline old-to-new key re-encryption procedure. Production keys must be injected by an independent secrets service. The vault is not an external KMS/HSM, centralized multi-tenant ACL system or cloud secret broker.
+
+### Admin throttling and observability
+With a required Redis-backed session store, the local-admin password login now uses shared atomic rate limits and fails closed on Redis errors. Browsers and reverse proxies cannot reset the counter by submitting alternate `X-Forwarded-For` values. Prometheus endpoint `/v1/metrics/prometheus` requires API authorization and the admin role; review [monitoring integration](OBSERVABILITY.md) before providing a private, authenticated scrape route.

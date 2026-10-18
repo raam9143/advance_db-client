@@ -141,3 +141,8 @@ Select a table to inspect column types, primary keys, indexes, and preview rows 
 **Write safety:** SQL writes are *disabled* unless the backend environment sets `ALLOW_WRITE_QUERIES=true`, and each write requires a connection opened without the read-only flag. SQL text is not logged; SHA-256 statement fingerprints and success/failure are logged. This logging is not a persistent audit trail.
 
 **Tests:** `cd backend && go test ./internal/server` runs dependency-free unit tests. `go test -race ./...` runs driver-backed SQLite tests; the PostgreSQL and MySQL integration cases require disposable test databases selected by `TEST_POSTGRES_HOST` and `TEST_MYSQL_HOST`, provisioned by CI. Run `cd frontend && npm install && npm run typecheck && npm run build` to verify the Next.js build.
+
+### Phase 6 operator resources
+- [Encrypted credentials and key rotation](docs/CREDENTIAL_VAULT.md)
+- [Prometheus metrics and SLO alert rules](docs/OBSERVABILITY.md)
+- [Enterprise release and recovery runbook](docs/PHASE6_RUNBOOK.md)
