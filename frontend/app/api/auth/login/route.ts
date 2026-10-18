@@ -5,7 +5,7 @@ import { consumeOTP, persistSession, loginAllowed, recordLoginFailure, clearLogi
 export const runtime = 'nodejs';
 export async function POST(req: Request) {
  if (!sameOrigin(req)) return NextResponse.json({error:'Invalid origin'}, {status:403});
- if(process.env.OIDC_REQUIRED==='true')return NextResponse.json({error:'Local password login is disabled; use SSO'}, {status:403});
+ if(process.env.OIDC_REQUIRED==='true'||process.env.ADB_PRODUCTION==='true')return NextResponse.json({error:'Local password login is disabled; use SSO'}, {status:403});
  if (Number(req.headers.get('content-length') || '0') > 4096) return NextResponse.json({error:'Payload too large'}, {status:413});
  // A single local-admin identity is throttled globally, not by client-supplied proxy headers.
  // With SESSION_REDIS_REQUIRED=true this fails closed and is shared across replicas.

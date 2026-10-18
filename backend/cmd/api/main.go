@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/raam9143/advance_db-client/backend/internal/server"
+ "github.com/raam9143/advance_db-client/backend/internal/prodcheck"
 	"log"
 	"net/http"
 	"os"
@@ -9,6 +10,7 @@ import (
 )
 
 func main() {
+ if err:=prodcheck.ValidateEnv();err!=nil{log.Fatal(err)}
 	address := os.Getenv("API_LISTEN")
 	if address == "" {
 		address = "127.0.0.1:8080"

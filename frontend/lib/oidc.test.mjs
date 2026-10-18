@@ -46,3 +46,17 @@ test('OIDC cryptographically validates ID token and group roles',()=>{
 test('OIDC configuration rejects HTTP or missing group mapping',()=>{
  assert.throws(()=>oidcConfig({...process.env,OIDC_ISSUER:'http://insecure.example.com',OIDC_CLIENT_ID:'x',OIDC_REDIRECT_URI:'https://db.example.com/callback',OIDC_ADMIN_GROUP:'a',OIDC_VIEWER_GROUP:'v',APP_SESSION_SECRET:'a'.repeat(40)}));
 });
+
+test('OIDC prevents multi-audience token substitution and requires IdP MFA',()=>{
+ const mfa={...config,requiredAmr:'mfa'};
+ const pass=token({amr:['pwd','mfa'],aud:[config.id,'another-client'],azp:config.id});
+ assert.equal(checkIDToken(pass.jwt,mfa,'test-nonce',pass.jwks).role,'viewer');
+ for(const claims of [
+  {amr:['pwd']},{amr:[]},
+  {amr:['mfa'],aud:[config.id,'attacker'],azp:'attacker'},
+  {amr:['mfa'],aud:[config.id,'attacker']}
+ ]){
+  const bad=token(claims);
+  assert.throws(()=>checkIDToken(bad.jwt,mfa,'test-nonce',bad.jwks));
+ }
+});

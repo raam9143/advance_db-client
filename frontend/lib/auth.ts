@@ -45,7 +45,14 @@ export function validPassword(submitted:string):boolean{
 export function sameOrigin(request:Request):boolean{
  const origin=request.headers.get('origin'),host=request.headers.get('host');
  if(!origin||!host)return false;
- try{return new URL(origin).host===host}catch{return false}
+ try{
+  const actual=new URL(origin);
+  if(process.env.ADB_PRODUCTION==='true'){
+   const expected=new URL(process.env.APP_PUBLIC_ORIGIN||'');
+   return expected.protocol==='https:'&&actual.origin===expected.origin&&host===expected.host;
+  }
+  return actual.host===host;
+ }catch{return false}
 }
 export function sessionScope(value:string,apiToken:string):{id:string;proof:string;role:Role;roleProof:string}{
  const session=parseSession(value);

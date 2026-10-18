@@ -10,7 +10,7 @@ export function oidcConfig(env=process.env){
  if(!/^https:\/\//.test(issuer)||!/^https:\/\//.test(redirect))throw Error('OIDC requires HTTPS issuer and redirect');
  if(!/^[-a-zA-Z0-9_./:]+$/.test(issuer)||id.length>200||!adminGroup||!viewerGroup)throw Error('invalid OIDC configuration');
  if(!env.APP_SESSION_SECRET||env.APP_SESSION_SECRET.length<32)throw Error('APP_SESSION_SECRET missing');
- return {issuer,id,secret,redirect,adminGroup,viewerGroup,sessionKey:env.APP_SESSION_SECRET};
+ return {issuer,id,secret,redirect,adminGroup,viewerGroup,sessionKey:env.APP_SESSION_SECRET,requiredAmr:env.OIDC_REQUIRED_AMR||''};
 }
 export function flowCookie(config,flow){
  const data=Buffer.from(JSON.stringify(flow)).toString('base64url');
@@ -84,7 +84,8 @@ export function checkIDToken(jwt,config,nonce,jwks,now=Math.floor(Date.now()/100
  const publicKey=createPublicKey({key,format:'jwk'});
  const verifier=createVerify('RSA-SHA256');verifier.update(parts[0]+'.'+parts[1]);verifier.end();
  if(!verifier.verify(publicKey,Buffer.from(parts[2],'base64url')))throw Error('OIDC signature invalid');
- if(claims.iss!==config.issuer||!(claims.aud===config.id||Array.isArray(claims.aud)&&claims.aud.includes(config.id))||claims.nonce!==nonce||!Number.isInteger(claims.exp)||claims.exp<=now||claims.exp>now+86400||!Number.isInteger(claims.iat)||claims.iat>now+60||claims.iat<now-86400||typeof claims.sub!=='string'||claims.sub.length<1||claims.sub.length>250)throw Error('OIDC claims rejected');
+ if(claims.iss!==config.issuer||!(claims.aud===config.id||Array.isArray(claims.aud)&&claims.aud.includes(config.id))||(Array.isArray(claims.aud)&&claims.aud.length>1&&claims.azp!==config.id)||claims.nonce!==nonce||!Number.isInteger(claims.exp)||claims.exp<=now||claims.exp>now+86400||!Number.isInteger(claims.iat)||claims.iat>now+60||claims.iat<now-86400||typeof claims.sub!=='string'||claims.sub.length<1||claims.sub.length>250)throw Error('OIDC claims rejected');
+ if(config.requiredAmr&&(!Array.isArray(claims.amr)||!claims.amr.includes(config.requiredAmr)))throw Error('required identity-provider MFA evidence absent');
  const groups=Array.isArray(claims.groups)?claims.groups:Array.isArray(claims.roles)?claims.roles:[];
  const role=groups.includes(config.adminGroup)?'admin':groups.includes(config.viewerGroup)?'viewer':null;
  if(!role)throw Error('OIDC user has no approved group');

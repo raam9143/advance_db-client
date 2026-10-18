@@ -90,7 +90,7 @@ jobs:
           node-version: '22'
       - name: Verify locked frontend dependency graph
         run: npm ci --no-audit --no-fund
-      - run: node --test lib/session-store.test.mjs
+      - run: node --test lib/session-store.test.mjs lib/production-policy.test.mjs
       - run: npm run typecheck
       - run: npm run build
 
