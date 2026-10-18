@@ -332,3 +332,14 @@ kbd{font:inherit;font-weight:700;color:#e2e9f9;padding:2px 5px;background:#26395
  .login-showcase{align-items:flex-start}
  .login-brand{width:100%}
 }
+
+/* Text contrast audit: key small-copy tones exceed 4.5:1 against white
+   and the main #f3f6fb canvas without relying on browser bold rendering. */
+:root{--muted:#53647d}
+.breadcrumbs,.breadcrumbs span,.page-heading p,.summary-label,.query-target,
+.schema-table small,.schema-placeholder,.schema-placeholder p,.schema-footer,
+.result-empty,.result-empty p,.history-note,.history-entry small,
+.workspace-foot,.workspace-foot span,.muted,.login-card .muted,
+.login-card .footnote,.field-label small,.redis-inspector p{
+ color:#53647d
+}
