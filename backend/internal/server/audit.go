@@ -37,6 +37,7 @@ type auditLog struct{
  sinkURL string
  sinkToken string
  sinkClient *http.Client
+ failed bool
 }
 type auditResponseWriter struct{http.ResponseWriter;status int}
 func(w *auditResponseWriter)WriteHeader(code int){w.status=code;w.ResponseWriter.WriteHeader(code)}
@@ -78,6 +79,7 @@ func openAuditLog()(*auditLog,error){
   a.sinkClient=&http.Client{Timeout:4*time.Second,CheckRedirect:func(*http.Request,[]*http.Request)error{return http.ErrUseLastResponse}}
  }
  if err=a.checkExisting();err!=nil{_ =file.Close();return nil,err}
+ if err=a.replayUnacknowledged();err!=nil{_ =file.Close();return nil,err}
  return a,nil
 }
 func(a *auditLog)checkExisting()error{
@@ -101,6 +103,7 @@ func(a *auditLog)checkExisting()error{
 }
 func(a *auditLog)Append(method,path,owner,event string,status int)error{
  a.mu.Lock();defer a.mu.Unlock()
+ if a.failed{return errors.New("audit log delivery failed; restart required for recovery")}
  if !strings.Contains(" GET POST PUT PATCH DELETE HEAD OPTIONS "," "+method+" "){method="UNKNOWN"}
  if len(path)>1024{path=path[:1024]}
  e:=auditEntry{
@@ -111,19 +114,30 @@ func(a *auditLog)Append(method,path,owner,event string,status int)error{
  e.MAC=signAudit(a.key,e)
  b,err:=json.Marshal(e);if err!=nil{return err}
  b=append(b,'\n')
- if _,err=a.file.Write(b);err!=nil{return err}
- if err=a.file.Sync();err!=nil{return err}
- if a.sinkURL!=""{
-  ctx,cancel:=context.WithTimeout(context.Background(),4*time.Second)
-  req,err:=http.NewRequestWithContext(ctx,"POST",a.sinkURL,bytes.NewReader(b))
-  if err!=nil{cancel();return errors.New("audit sink request failed")}
-  req.Header.Set("Content-Type","application/json")
-  req.Header.Set("Authorization","Bearer "+a.sinkToken)
-  response,err:=a.sinkClient.Do(req)
-  if err!=nil{cancel();return errors.New("audit sink unavailable")}
-  response.Body.Close();cancel()
-  if response.StatusCode!=200&&response.StatusCode!=201&&response.StatusCode!=204{return errors.New("audit sink rejected event")}
- }
+ if _,err=a.file.Write(b);err!=nil{a.failed=true;return err}
+ if err=a.file.Sync();err!=nil{a.failed=true;return err}
+ // The local record is durable even if subsequent network delivery fails.
+ // Keep the in-memory chain consistent and forbid further appends on error.
  a.previous=e.MAC
+ if a.sinkURL!=""{
+  if err:=a.deliver(b);err!=nil{a.failed=true;return err}
+  if err:=a.storeReceipt(e.MAC);err!=nil{a.failed=true;return err}
+ }
+ return nil
+}
+
+// The sink MUST durably commit and deduplicate by the MAC in the JSON record
+// before acknowledging; a lost response or receipt sync causes safe replay.
+func(a *auditLog)deliver(payload []byte)error{
+ ctx,cancel:=context.WithTimeout(context.Background(),4*time.Second)
+ defer cancel()
+ req,err:=http.NewRequestWithContext(ctx,"POST",a.sinkURL,bytes.NewReader(payload))
+ if err!=nil{return errors.New("audit sink request failed")}
+ req.Header.Set("Content-Type","application/json")
+ req.Header.Set("Authorization","Bearer "+a.sinkToken)
+ response,err:=a.sinkClient.Do(req)
+ if err!=nil{return errors.New("audit sink unavailable")}
+ defer response.Body.Close()
+ if response.StatusCode!=200&&response.StatusCode!=201&&response.StatusCode!=204{return errors.New("audit sink rejected event")}
  return nil
 }
