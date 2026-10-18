@@ -122,6 +122,11 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case strings.HasPrefix(r.URL.Path,"/v1/backups/")&&(r.Method=="GET"||r.Method=="DELETE"):
         s.backupFile(w,r,strings.TrimPrefix(r.URL.Path,"/v1/backups/"))
+    case r.URL.Path=="/v1/metrics/prometheus"&&r.Method=="GET":
+        if requestRole(r)!="admin"{fail(w,403,"admin role required");return}
+        w.Header().Set("Content-Type","text/plain; version=0.0.4; charset=utf-8")
+        w.WriteHeader(200)
+        _,_=io.WriteString(w,s.metrics.prometheus())
     case r.URL.Path=="/v1/metrics"&&r.Method=="GET":
         if requestRole(r)!="admin"{fail(w,403,"admin role required");return}
         respond(w,200,s.metrics.snapshot())

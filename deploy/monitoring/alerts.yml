@@ -1,0 +1,20 @@
+groups:
+  - name: advance-db-client
+    interval: 60s
+    rules:
+      - alert: AdvanceDBHighServerErrorRate
+        expr: |
+          sum(rate(adb_http_responses_total{status_class="5xx"}[5m]))
+          / clamp_min(sum(rate(adb_http_requests_total[5m])), 0.01) > 0.01
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Advance DB API error rate exceeds 1% (5 minutes)"
+      - alert: AdvanceDBAPIMetricsMissing
+        expr: absent(adb_http_requests_total)
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Advance DB API metrics endpoint not reachable"
