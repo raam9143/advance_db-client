@@ -41,3 +41,5 @@ The admin-only encrypted profile store is opt-in. Read [the credential vault run
 
 ### Admin throttling and observability
 With a required Redis-backed session store, the local-admin password login now uses shared atomic rate limits and fails closed on Redis errors. Browsers and reverse proxies cannot reset the counter by submitting alternate `X-Forwarded-For` values. Prometheus endpoint `/v1/metrics/prometheus` requires API authorization and the admin role; review [monitoring integration](OBSERVABILITY.md) before providing a private, authenticated scrape route.
+
+**Phase 6 sign-off warning:** GitHub CI checks and the reference runbooks are not an approved security assessment. The owner must confirm IdP group mappings/offboarding, enforce branch protections, provision TLS Redis and monitoring, review key custody, and execute a real recovery drill before enterprise release.

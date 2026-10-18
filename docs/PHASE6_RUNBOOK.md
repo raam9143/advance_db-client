@@ -8,11 +8,11 @@
 3. Register the exact callback `https://db.example.com/api/auth/oidc/callback`. Keep `APP_SESSION_SECRET` at least 32 random characters and rotate it on confirmed cookie compromise (old sessions become invalid).
 4. Browser-session identities are verified with HMAC and forwarded to Go. OIDC viewers are forced to read-only connections; enforce **database-level SELECT-only accounts** because lexical SQL checks cannot safely replace database authorization.
 5. Sign-in uses OIDC authorization-code+PKCE with state/nonce, HTTPS issuer metadata, pinned issuer/origin and RS256 JWKS verification. Validate browser/callback redirects, group claims, IDP logout, MFA prompts, failed authorization, tampered JWT, token expiry, rotation of signing keys, and offboarding using an actual identity provider. The project has unit tests but no live IdP acceptance test.
-6. Do not horizontally scale until distributed sessions, logout revocation, MFA replay protection and audit sink sharing have been implemented and tested. The optional TOTP remains one Node-process only.
+6. Redis-backed sessions, logout revocation, OTP replay defense and local-admin throttling can be shared across replicas when SESSION_REDIS_REQUIRED=true. Local audit files and ephemeral database handles are not distributed; multi-node IdP/MFA failover requires additional testing.
 
 ## Secrets and credentials
 - Keep `APP_SESSION_SECRET`, `API_TOKEN`, `APP_TOTP_SECRET`, `OIDC_CLIENT_SECRET`, `AI` keys, `AUDIT_HMAC_KEY` and database credentials in a managed secret service with audited access, not GitHub variables, app logs, localStorage or checked-in files.
-- Database connection secrets currently live **in Go process memory only** and expire with sessions; no persistent credential vault exists. Do not promise encrypted credential-at-rest or key rotation for stored database secrets without implementing them.
+- Inline connection secrets remain in Go process memory only. An **optional local encrypted profile vault** supports AES-256-GCM encryption at rest, profile references, and offline active/previous-key rotation. See [vault guide](CREDENTIAL_VAULT.md). HSM custody, tenant-specific secret ACLs, and central multi-replica rotation remain unimplemented.
 - Rotate API/token secrets through a staged, recorded operator maintenance window. Reset all browser sessions on APP_SESSION_SECRET rotation.
 - SSH bastions and target ports must be explicitly allowlisted with out-of-band verified known-hosts fingerprints.
 
