@@ -76,8 +76,8 @@ jobs:
                 -e MARIADB_ROOT_PASSWORD=ci-only-root -e MARIADB_DATABASE=adb \
                 -e MARIADB_USER=adb -e MARIADB_PASSWORD=adbtest "$IMAGE" ;;
             cockroach)
-              docker run -d --name compat-db -p 127.0.0.1:26257:26257 "$IMAGE" \
-                start-single-node --insecure --listen-addr=0.0.0.0:26257 --http-addr=0.0.0.0:8080 ;;
+              docker run -d --name compat-db --network host "$IMAGE" \
+                start-single-node --insecure --listen-addr=127.0.0.1:26257 --http-addr=127.0.0.1:8080 ;;
             mongo)
               docker run -d --name compat-db -p 127.0.0.1:27017:27017 "$IMAGE" ;;
             redis)
