@@ -319,3 +319,16 @@ kbd{font:inherit;font-weight:700;color:#e2e9f9;padding:2px 5px;background:#26395
  .login-card{padding:25px 20px}
  .login-card h1{font-size:25px}
 }
+/* Visual QA corrections (375px/320px): keep the sign-in banner full-width
+   and give the SQL toolbar an ergonomic two-column touch layout. */
+.login-bg{place-items:stretch}
+.login-showcase{width:100%}
+@media(max-width:460px){
+ .query-footer{flex-direction:column;align-items:stretch;gap:10px}
+ .query-footer .query-warning{white-space:normal;flex:0 0 auto}
+ .query-footer .action-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;flex:none;width:100%;margin:0}
+ .query-footer .action-row button{width:100%;min-width:0;margin:0;flex-grow:0;padding:9px 6px;min-height:42px;font-size:11px;justify-content:center}
+ .query-footer .action-row button:last-child{grid-column:1/-1;font-weight:750}
+ .login-showcase{align-items:flex-start}
+ .login-brand{width:100%}
+}
