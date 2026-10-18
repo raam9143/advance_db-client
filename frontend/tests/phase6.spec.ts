@@ -34,6 +34,16 @@ test('signed-in SQL read-only workspace through real Go API',async({page})=>{
   data:{sql:'SELECT 1 AS answer'}
  });
  expect(query.status(),await query.text()).toBe(200);
+ const csv=await page.request.post(base+`/api/backend/v1/connections/${connection.id}/stream`,{
+  headers:{Origin:base,'Content-Type':'application/json'},
+  data:{sql:"WITH RECURSIVE n(x) AS (SELECT 1 UNION ALL SELECT x+1 FROM n WHERE x < 1205) SELECT x FROM n"}
+ });
+ expect(csv.status(),await csv.text()).toBe(200);
+ expect(csv.headers()['content-type']).toContain('text/csv');
+ expect(csv.headers()['x-adb-row-cap']).toBe('50000');
+ const rows=(await csv.text()).trim().split(/\r?\n/);
+ expect(rows.length).toBe(1206);
+ expect(rows[1]).toBe('1');
 });
 
 test('independent in-memory SQL tabs preserve each draft without storing it implicitly',async({page})=>{
