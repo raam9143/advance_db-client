@@ -700,3 +700,8 @@ func(s *Server)checkQuotaLocked(owner string)bool{
  for _,connection:=range s.dbs{if connection.owner==owner{count++}}
  return count<6
 }
+
+func(s *Server)Ready()error{
+ if s.auditError!=nil||s.auditFailed.Load(){return errors.New("audit subsystem unavailable")}
+ return nil
+}

@@ -78,3 +78,26 @@ jobs:
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           exit-code: '1'
+
+  production-compose-policy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate production Compose syntax (synthetic, non-secret values)
+        env:
+          API_TOKEN: "synthetic-api-token-at-least-32-chars-long"
+          AUDIT_HMAC_KEY: "synthetic-audit-key-at-least-32-chars"
+          VAULT_ACTIVE_KEY_B64: "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
+          ADB_DATA_DIR: "/tmp/adb-data-ci"
+          ADB_AUDIT_DIR: "/tmp/adb-audit-ci"
+          ADB_VAULT_DIR: "/tmp/adb-vault-ci"
+          APP_SESSION_SECRET: "synthetic-session-secret-at-least-32-chars"
+          APP_PUBLIC_ORIGIN: "https://db.example.org"
+          OIDC_ISSUER: "https://sso.example.org"
+          OIDC_CLIENT_ID: "adb-ci"
+          OIDC_REDIRECT_URI: "https://db.example.org/api/auth/oidc/callback"
+          OIDC_ADMIN_GROUP: "adb-admin"
+          OIDC_VIEWER_GROUP: "adb-viewer"
+          OIDC_REQUIRED_AMR: "mfa"
+          SESSION_REDIS_URL: "rediss://redis.example.org:6380"
+        run: docker compose -f deploy/compose.production.yml config --quiet
