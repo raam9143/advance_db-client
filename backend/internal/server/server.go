@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+ "sync/atomic"
 	"time"
  "github.com/raam9143/advance_db-client/backend/internal/redisclient"
  "github.com/raam9143/advance_db-client/backend/internal/vault"
@@ -73,6 +74,7 @@ type Server struct {
 	now   func() time.Time
  audit *auditLog
  auditError error
+ auditFailed atomic.Bool
  metrics *apiMetrics
 }
 
@@ -88,7 +90,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	if r.URL.Path == "/health" && r.Method == "GET" {
-        if s.auditError!=nil{fail(w,503,"not ready");return}
+        if s.auditError!=nil||s.auditFailed.Load(){fail(w,503,"not ready");return}
         respond(w, 200, map[string]string{"status": "ok"})
 		return
 	}
@@ -104,11 +106,11 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
     if requestRole(r)=="viewer"&&r.Method=="POST"&&(r.URL.Path=="/v1/ai/review"||strings.HasSuffix(r.URL.Path,"/backup")){
      fail(w,403,"viewer role does not permit this operation");return
     }
-    if s.auditError!=nil{fail(w,503,"audit log unavailable");return}
+    if s.auditError!=nil||s.auditFailed.Load(){fail(w,503,"audit log unavailable");return}
     if s.audit!=nil{
-     if err:=s.audit.Append(r.Method,r.URL.Path,owner,"started",0);err!=nil{fail(w,503,"audit log write failed");return}
+     if err:=s.audit.Append(r.Method,r.URL.Path,owner,"started",0);err!=nil{s.auditFailed.Store(true);fail(w,503,"audit log write failed");return}
      aw:=&auditResponseWriter{ResponseWriter:w,status:200}
-     defer func(){_=s.audit.Append(r.Method,r.URL.Path,owner,"finished",aw.status)}()
+     defer func(){if err:=s.audit.Append(r.Method,r.URL.Path,owner,"finished",aw.status);err!=nil{s.auditFailed.Store(true)}}()
      w=aw
     }
     if r.ContentLength > maxBody {

@@ -13,6 +13,7 @@ import(
  "path/filepath"
  "strings"
  "sync"
+ "syscall"
  "time"
 )
 type auditEntry struct{
@@ -58,6 +59,8 @@ func openAuditLog()(*auditLog,error){
  }else if !os.IsNotExist(err){return nil,err}
  file,err:=os.OpenFile(path,os.O_RDWR|os.O_APPEND|os.O_CREATE,0600)
  if err!=nil{return nil,err}
+ // Only one process may write a hash chain. Multiple writers would corrupt ordering.
+ if err=syscall.Flock(int(file.Fd()),syscall.LOCK_EX|syscall.LOCK_NB);err!=nil{_ =file.Close();return nil,errors.New("audit log already owned by another process")}
  a:=&auditLog{file:file,key:[]byte(key)}
  if err=a.checkExisting();err!=nil{_ =file.Close();return nil,err}
  return a,nil

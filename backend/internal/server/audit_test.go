@@ -44,3 +44,24 @@ func TestAuditFailClosedAndRecords(t *testing.T){
  raw,err:=os.ReadFile(filepath.Join(root,"audit.jsonl"));if err!=nil{t.Fatal(err)}
  if !bytes.Contains(raw,[]byte("finished"))||!bytes.Contains(raw,[]byte("started")){t.Fatalf("missing audit events: %s",raw)}
 }
+
+func TestAuditIsSingleWriterAndFailsReadiness(t *testing.T){
+ root:=t.TempDir();if err:=os.Chmod(root,0700);err!=nil{t.Fatal(err)}
+ path:=filepath.Join(root,"api.jsonl")
+ t.Setenv("AUDIT_LOG_PATH",path)
+ t.Setenv("AUDIT_HMAC_KEY",strings.Repeat("z",40))
+ s:=New("token")
+ if s.audit==nil||s.auditError!=nil{t.Fatalf("could not open audit: %v",s.auditError)}
+ if other,err:=openAuditLog();err==nil{
+  _=other.file.Close()
+  t.Fatal("two audit writers acquired same file")
+ }
+ if err:=s.audit.file.Close();err!=nil{t.Fatal(err)}
+ req:=httptest.NewRequest("GET","/v1/connections",nil)
+ req.Header.Set("Authorization","Bearer token")
+ w:=httptest.NewRecorder();s.ServeHTTP(w,req)
+ if w.Code!=503{t.Fatalf("audit error did not fail closed: %d",w.Code)}
+ req=httptest.NewRequest("GET","/health",nil)
+ w=httptest.NewRecorder();s.ServeHTTP(w,req)
+ if w.Code!=503{t.Fatalf("health was ready after audit failure: %d",w.Code)}
+}
