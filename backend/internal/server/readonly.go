@@ -20,7 +20,10 @@ func ReadOnlySQL(input string) bool {
   }
  }
  if first=="EXPLAIN" {
-  if len(tokens)<2||tokens[1]!="SELECT"&&tokens[1]!="WITH"{return false}
+  if len(tokens)<2{return false}
+  if tokens[1]!="SELECT"&&tokens[1]!="WITH"{
+   if len(tokens)<4||tokens[1]!="QUERY"||tokens[2]!="PLAN"||tokens[3]!="SELECT"&&tokens[3]!="WITH"{return false}
+  }
  }
  if first=="WITH"&&!containsWord(tokens,"SELECT"){return false}
  for i,t:=range tokens {
