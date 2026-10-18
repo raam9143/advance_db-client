@@ -22,3 +22,14 @@ test('cross-process Redis backed revocation and single-use code',async(t)=>{
 });
 
 after(async()=>{await closeSessionStore()});
+
+test('distributed local-admin login lockout',async(t)=>{
+ if(!process.env.SESSION_REDIS_URL){t.skip('requires SESSION_REDIS_URL');return}
+ const {loginAllowed,recordLoginFailure,clearLoginFailures}=await import('./session-store.mjs');
+ await clearLoginFailures();
+ assert.equal(await loginAllowed(),true);
+ for(let i=0;i<5;i++)await recordLoginFailure();
+ assert.equal(await loginAllowed(),false);
+ await clearLoginFailures();
+ assert.equal(await loginAllowed(),true);
+});

@@ -59,3 +59,28 @@ export async function consumeOTP(secret,otp){
 }
 
 export async function closeSessionStore(){const prior=pending;pending=undefined;if(prior){const c=await prior;c.destroy()}}
+
+const localAttempts=new Map();
+const LOCK_SECONDS=900,MAX_ATTEMPTS=5;
+export async function loginAllowed(){
+ const c=await client();
+ if(c){const count=Number(await c.get('adb:login:local-admin')||'0');return count<MAX_ATTEMPTS}
+ const state=localAttempts.get('admin');
+ return !state||state.expires<=Date.now()||state.count<MAX_ATTEMPTS;
+}
+export async function recordLoginFailure(){
+ const c=await client();
+ if(c){
+  // Atomic counter + window; a rejected attempt is recorded across replicas.
+  const result=await c.multi().incr('adb:login:local-admin').expire('adb:login:local-admin',LOCK_SECONDS,'NX').exec();
+  return Number(result?.[0])||0;
+ }
+ const state=localAttempts.get('admin'),now=Date.now();
+ const next=state&&state.expires>now?{count:state.count+1,expires:state.expires}:{count:1,expires:now+LOCK_SECONDS*1000};
+ localAttempts.set('admin',next);return next.count;
+}
+export async function clearLoginFailures(){
+ const c=await client();
+ if(c){await c.del('adb:login:local-admin');return}
+ localAttempts.delete('admin');
+}
