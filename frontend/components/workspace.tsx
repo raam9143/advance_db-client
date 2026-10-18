@@ -1,6 +1,6 @@
 'use client';
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Activity, ChevronDown, CircleCheck, Clock3, Code2, Database, Download, HardDrive, Layers, LoaderCircle, LogOut, PanelLeftClose, Play, Plus, RefreshCw, Search, Server, Shield, ShieldAlert, Table2, Trash2, X } from 'lucide-react';
+import { Activity, ChevronDown, CircleCheck, Clock3, Code2, Database, Download, HardDrive, Layers, LoaderCircle, LogOut, Menu, PanelLeftClose, Play, Plus, RefreshCw, Search, Server, Shield, ShieldAlert, Table2, X } from 'lucide-react';
 
 type Engine='postgres'|'mysql'|'sqlite'|'mariadb'|'cockroach'|'clickhouse'|'redis'|'oracle'|'sqlserver'|'mongo';
 type Connection={id:string;name:string;engine:Engine;database:string;host:string;readOnly:boolean};
@@ -22,6 +22,12 @@ function sqlIdentifier(s:string,engine:Engine){if(engine==='sqlserver')return '[
 
 export default function Workspace(){
  const pendingQuery=useRef<AbortController|null>(null);
+ const dialogRef=useRef<HTMLFormElement|null>(null);
+ const returnFocusRef=useRef<HTMLElement|null>(null);
+ const [connectionFilter,setConnectionFilter]=useState('');
+ const [connectionsBusy,setConnectionsBusy]=useState(true);
+ const [schemaBusy,setSchemaBusy]=useState(false);
+ const [notice,setNotice]=useState('');
  const [aiBusy,setAIBusy]=useState(false);
  const [aiAdvice,setAIAdvice]=useState('');
  const [backupBusy,setBackupBusy]=useState(false);
@@ -63,19 +69,46 @@ export default function Workspace(){
    }
  }
  const active=connections.find(c=>c.id===activeId);
- const load=useCallback(async()=>{try{const c=await api<Connection[]>('/v1/connections');setConnections(c);setActiveId(previous=>c.some(a=>a.id===previous)?previous:(c[0]?.id||''))}catch(e){setError(e instanceof Error?e.message:'Could not load connections')}},[]);
+ const load=useCallback(async()=>{setConnectionsBusy(true);try{const c=await api<Connection[]>('/v1/connections');setConnections(c);setActiveId(previous=>c.some(a=>a.id===previous)?previous:(c[0]?.id||''))}catch(e){setError(e instanceof Error?e.message:'Could not load connections')}finally{setConnectionsBusy(false)}},[]);
  useEffect(()=>{void load();try{const v=JSON.parse(localStorage.getItem(storage)||'[]') as HistoryItem[];if(Array.isArray(v))setHistory(v.slice(0,25));const sq=JSON.parse(localStorage.getItem(savedStorage)||'[]') as {name:string;sql:string}[];if(Array.isArray(sq))setSavedQueries(sq.slice(0,50).filter(q=>typeof q.name==='string'&&typeof q.sql==='string'))}catch{/* invalid local history ignored */}},[load]);
- useEffect(()=>{if(!activeId||connections.find(c=>c.id===activeId)?.engine==='redis'){setTables([]);setSelectedTable(null);setTableMeta(null);setTablePage(null);return}let cancelled=false;api<SchemaTable[]>(`/v1/connections/${activeId}/schema`).then(x=>{if(!cancelled)setTables(x)}).catch(e=>{if(!cancelled){setTables([]);setError(e.message)}});return ()=>{cancelled=true}},[activeId,connections]);
+ useEffect(()=>{if(!activeId||connections.find(c=>c.id===activeId)?.engine==='redis'){setTables([]);setSelectedTable(null);setTableMeta(null);setTablePage(null);setSchemaBusy(false);return}let cancelled=false;setSchemaBusy(true);setTables([]);setSelectedTable(null);setTableMeta(null);setTablePage(null);api<SchemaTable[]>(`/v1/connections/${activeId}/schema`).then(x=>{if(!cancelled)setTables(x)}).catch(e=>{if(!cancelled){setTables([]);setError(e.message)}}).finally(()=>{if(!cancelled)setSchemaBusy(false)});return ()=>{cancelled=true}},[activeId,connections]);
  const filtered=useMemo(()=>tables.filter(t=>`${t.schema}.${t.name}`.toLowerCase().includes(filter.toLowerCase())),[tables,filter]);
+ const visibleConnections=useMemo(()=>connections.filter(c=>[c.name,c.database,c.host,c.engine].join(' ').toLowerCase().includes(connectionFilter.toLowerCase())),[connections,connectionFilter]);
+ function showConnectionDialog(){returnFocusRef.current=document.activeElement instanceof HTMLElement?document.activeElement:null;setError('');setModal(true)}
+ function closeConnectionDialog(){setModal(false);requestAnimationFrame(()=>returnFocusRef.current?.focus())}
+ useEffect(()=>{
+   if(!modal)return;
+   dialogRef.current?.querySelector<HTMLInputElement>('input:not([type=checkbox])')?.focus();
+   const onKey=(event:KeyboardEvent)=>{
+     if(event.key==='Escape'){event.preventDefault();closeConnectionDialog();return}
+     if(event.key!=='Tab'||!dialogRef.current)return;
+     const available=Array.from(dialogRef.current.querySelectorAll<HTMLElement>('button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),a[href]'));
+     if(!available.length)return;
+     const first=available[0],last=available[available.length-1];
+     if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus()}
+     else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus()}
+   };
+   document.addEventListener('keydown',onKey);
+   return ()=>document.removeEventListener('keydown',onKey);
+ },[modal]);
+ useEffect(()=>{
+   const onKey=(event:KeyboardEvent)=>{
+     if(event.key==='Escape'&&!modal)setSidebar(false);
+     if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='b'&&!modal){event.preventDefault();setSidebar(v=>!v)}
+   };
+   document.addEventListener('keydown',onKey);
+   return ()=>document.removeEventListener('keydown',onKey);
+ },[modal]);
+ useEffect(()=>{if(window.matchMedia('(max-width: 760px)').matches)setSidebar(false)},[]);
  function changeEngine(value:Engine){const selected=engines.find(e=>e.id===value)!;setForm(f=>({...f,engine:value,port:selected.port,sslMode:value==='mysql'||value==='mariadb'?'true':'require',host:value==='sqlite'?'':f.host,readOnly:value==='redis'||value==='mongo'?true:f.readOnly,serviceMode:value==='oracle'?'service':'',tunnelEnabled:false}))}
  async function connect(e:FormEvent){e.preventDefault();setConnecting(true);setError('');try{const {credentialRef,tunnelEnabled,sshHost,sshPort,sshUser,sshPrivateKey,...dbConfig}=form;
   const payload=credentialRef.trim()?{name:form.name,credentialRef:credentialRef.trim(),readOnly:true}
    :{...dbConfig,...(tunnelEnabled?{tunnel:{host:sshHost,port:sshPort,user:sshUser,privateKey:sshPrivateKey}}:{})};
-  const conn=await api<Connection>('/v1/connections','POST',payload);setConnections(v=>[...v,conn]);setActiveId(conn.id);setForm(initial);setModal(false);setResult(null)}catch(e){setError(e instanceof Error?e.message:'Connection failed')}finally{setConnecting(false)}}
- async function remove(id:string){if(!window.confirm('Disconnect this database session?'))return;try{await api<void>(`/v1/connections/${id}`,'DELETE');setConnections(v=>v.filter(c=>c.id!==id));if(activeId===id){setActiveId('');setResult(null);setSelectedTable(null);setTablePage(null);setTableMeta(null)}}catch(e){setError(e instanceof Error?e.message:'Disconnect failed')}}
+  const conn=await api<Connection>('/v1/connections','POST',payload);setConnections(v=>[...v,conn]);setActiveId(conn.id);setForm(initial);closeConnectionDialog();setNotice('Connection established successfully');setResult(null)}catch(e){setError(e instanceof Error?e.message:'Connection failed')}finally{setConnecting(false)}}
+ async function remove(id:string){if(!window.confirm('Disconnect this database session?'))return;try{await api<void>(`/v1/connections/${id}`,'DELETE');setConnections(v=>v.filter(c=>c.id!==id));if(activeId===id){setActiveId('');setResult(null);setSelectedTable(null);setTablePage(null);setTableMeta(null)}setNotice('Database disconnected')}catch(e){setError(e instanceof Error?e.message:'Disconnect failed')}}
  function pushHistory(item:HistoryItem){setHistory(prev=>{const next=[item,...prev].slice(0,25);try{localStorage.setItem(storage,JSON.stringify(next))}catch{}return next})}
  function parsedParameters(): unknown[] {const p:unknown=JSON.parse(parameters);if(!Array.isArray(p)||p.length>100||p.some(v=>v!==null&&!['string','number','boolean'].includes(typeof v)))throw Error('Parameters must be a JSON array (max 100) of strings, numbers, booleans or null');return p}
- function saveQuery(){const name=window.prompt('Name for saved SQL query');if(!name?.trim()||!query.trim())return;const next=[{name:name.trim().slice(0,80),sql:query},...savedQueries.filter(s=>s.name!==name.trim())].slice(0,50);setSavedQueries(next);try{localStorage.setItem(savedStorage,JSON.stringify(next))}catch{/* browser storage unavailable */}}
+ function saveQuery(){const name=window.prompt('Name for saved SQL query');if(!name?.trim()||!query.trim())return;const next=[{name:name.trim().slice(0,80),sql:query},...savedQueries.filter(s=>s.name!==name.trim())].slice(0,50);setSavedQueries(next);setNotice('SQL query saved in this browser');try{localStorage.setItem(savedStorage,JSON.stringify(next))}catch{/* browser storage unavailable */}}
  async function execute(explain=false){if(!active||!query.trim()||busy)return;setError('');let args:unknown[];try{args=parsedParameters()}catch(e){setError(e instanceof Error?e.message:'Invalid parameters');return}
  const isRead=/^\s*(select|with|explain|show)\s/i.test(query);const confirmWrite=!explain&&!isRead;if(confirmWrite&&(active.readOnly||!window.confirm('This operation may modify data in '+active.name+'. Proceed with this exact SQL statement?')))return;
  const controller=new AbortController();pendingQuery.current=controller;setBusy(true);setTab('results');const now=new Date().toLocaleString();try{const data=await api<QueryResult>(`/v1/connections/${active.id}/${explain?'explain':'query'}`,'POST',{sql:query,parameters:args,timeoutSeconds:20,confirmWrite},controller.signal);setResult(data);if(!explain)pushHistory({sql:query,time:now,engine:active.engine,success:true})}catch(e){setResult(null);setError(controller.signal.aborted?'Query cancelled':e instanceof Error?e.message:'Query failed');if(!explain&&!controller.signal.aborted)pushHistory({sql:query,time:now,engine:active.engine,success:false})}finally{if(pendingQuery.current===controller)pendingQuery.current=null;setBusy(false)}}
