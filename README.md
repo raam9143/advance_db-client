@@ -73,6 +73,8 @@ The Go API is internal to the Compose network, not published on a host port. The
 
 ## Supported engines
 
+**Automatic driver update proposals and weekly newer-server compatibility tests** are configured. Updates require reviewed pull requests and passing CI; no production driver is downloaded or switched at runtime. See [Driver updates and forward compatibility](docs/DB_DRIVER_UPDATES.md).
+
 | Engine | Status | Verification |
 |---|---|---|
 | PostgreSQL 16 | SQL queries, schema, table paging and exports | Live CI integration |
