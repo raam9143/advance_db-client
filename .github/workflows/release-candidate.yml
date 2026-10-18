@@ -49,7 +49,7 @@ jobs:
           path: dist/
           if-no-files-found: error
           retention-days: 30
-      - uses: actions/attest-build-provenance@v3
+      - uses: actions/attest-build-provenance@v4
         with:
           subject-path: |
             dist/adb-api-linux-amd64
