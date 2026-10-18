@@ -4,13 +4,11 @@ COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
 COPY . .
 RUN npm run build
-FROM node:22-alpine
-RUN addgroup -g 1001 -S nodeapp && adduser -u 1001 -S nodeapp -G nodeapp
+FROM gcr.io/distroless/nodejs22-debian12:nonroot
 WORKDIR /app
 ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
-COPY --from=build --chown=nodeapp:nodeapp /app/.next/standalone ./
-COPY --from=build --chown=nodeapp:nodeapp /app/.next/static ./.next/static
-USER nodeapp
+COPY --from=build --chown=nonroot:nonroot /app/.next/standalone ./
+COPY --from=build --chown=nonroot:nonroot /app/.next/static ./.next/static
 EXPOSE 3000
-CMD ["node","server.js"]
+CMD ["server.js"]
