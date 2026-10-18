@@ -31,7 +31,8 @@ func TestLiveClickHouseHTTPSProxy(t *testing.T){
   ctx,cancel:=context.WithTimeout(r.Context(),15*time.Second);defer cancel()
   req,err:=http.NewRequestWithContext(ctx,"POST",target.String(),strings.NewReader(string(body)))
   if err!=nil{http.Error(w,"bad upstream request",500);return}
-  req.Header.Set("X-ClickHouse-User","default")
+  req.Header.Set("X-ClickHouse-User","adb")
+  req.Header.Set("X-ClickHouse-Key","adbtest")
   resp,err:=(&http.Client{Timeout:15*time.Second}).Do(req)
   if err!=nil{http.Error(w,"upstream unavailable",502);return}
   defer resp.Body.Close()

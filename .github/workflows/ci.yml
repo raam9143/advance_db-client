@@ -108,10 +108,14 @@ jobs:
     services:
       clickhouse:
         image: clickhouse/clickhouse-server:25.3
+        env:
+          CLICKHOUSE_USER: adb
+          CLICKHOUSE_PASSWORD: adbtest
+          CLICKHOUSE_DB: default
         ports:
           - 8123:8123
         options: >-
-          --health-cmd "clickhouse-client --query 'SELECT 1'" --health-interval 10s --health-timeout 5s --health-retries 15
+          --health-cmd "clickhouse-client --user adb --password adbtest --query 'SELECT 1'" --health-interval 10s --health-timeout 5s --health-retries 15
     env:
       TEST_CLICKHOUSE_HOST: 127.0.0.1
     defaults:
