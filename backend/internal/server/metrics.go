@@ -18,6 +18,7 @@ type apiMetrics struct{
 type metricsResponseWriter struct{http.ResponseWriter;status int}
 func(w *metricsResponseWriter)WriteHeader(code int){w.status=code;w.ResponseWriter.WriteHeader(code)}
 func(w *metricsResponseWriter)Write(b []byte)(int,error){return w.ResponseWriter.Write(b)}
+func(w *metricsResponseWriter)Flush(){if flusher,ok:=w.ResponseWriter.(http.Flusher);ok{flusher.Flush()}}
 type metricsSnapshot struct{
  UptimeSeconds int64 `json:"uptimeSeconds"`
  Requests uint64 `json:"requestsTotal"`

@@ -1,0 +1,7 @@
+# Bounded SQL CSV streaming
+
+`POST /v1/connections/{id}/stream` accepts the regular JSON `QueryRequest` with a single read-only `sql` and optional scalar bind `parameters`. This API is available only on connections opened read-only and writes CSV incrementally instead of assembling all rows in application memory. It is protected by the same bearer auth and signed user-scoped connection ownership as other query endpoints; Next.js BFF forwards the streaming response.
+
+Limits: at most **50,000 rows**, **32 MiB** response data, **250 columns**, and a **60-second** server-side context. Rows are escaped as CSV, and cells that resemble spreadsheet formulas are prefixed with an apostrophe. HTTP response headers advertise `X-ADB-Row-Cap` and `X-ADB-Byte-Cap`; these are caps, not evidence that the query returned its full result. Clients must treat truncated or interrupted downloads as incomplete. No server-side background job or resumable cursor is provided.
+
+Limits apply only to the response and are not database resource quotas. A read-only DB account, query timeouts, and database resource governor limits are still essential. Driver read-only transactions are used where supported; Oracle/SQL Server need independently enforced DB read roles. For regulated exports, require external approval, encryption of destination files, audit retention, and transfer integrity checks. The API does not provide any database restore/import functionality.

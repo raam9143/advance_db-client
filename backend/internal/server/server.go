@@ -179,7 +179,10 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if len(parts) == 2 && r.Method == "POST" && parts[1] == "explain" {
         s.explain(w, r, parts[0]); return
     }
-    if len(parts) == 2 && r.Method == "POST" && parts[1] == "export" {
+    if len(parts)==2&&r.Method=="POST"&&parts[1]=="stream"{
+   s.streamCSV(w,r,parts[0]);return
+  }
+  if len(parts) == 2 && r.Method == "POST" && parts[1] == "export" {
 			s.export(w, r, parts[0])
 			return
 		}

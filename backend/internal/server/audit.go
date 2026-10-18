@@ -35,6 +35,7 @@ type auditLog struct{
 type auditResponseWriter struct{http.ResponseWriter;status int}
 func(w *auditResponseWriter)WriteHeader(code int){w.status=code;w.ResponseWriter.WriteHeader(code)}
 func(w *auditResponseWriter)Write(body []byte)(int,error){return w.ResponseWriter.Write(body)}
+func(w *auditResponseWriter)Flush(){if flusher,ok:=w.ResponseWriter.(http.Flusher);ok{flusher.Flush()}}
 func digest(key []byte,data string)string{
  mac:=hmac.New(sha256.New,key);mac.Write([]byte(data))
  return hex.EncodeToString(mac.Sum(nil))
