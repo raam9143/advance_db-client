@@ -35,3 +35,24 @@ test('signed-in SQL read-only workspace through real Go API',async({page})=>{
  });
  expect(query.status(),await query.text()).toBe(200);
 });
+
+test('independent in-memory SQL tabs preserve each draft without storing it implicitly',async({page})=>{
+ await page.goto('/login');
+ await page.locator('#password').fill(password);
+ await page.getByRole('button',{name:/Sign in/i}).click();
+ await expect(page.getByRole('heading',{name:'SQL Workspace'})).toBeVisible();
+ const editor=page.getByRole('textbox',{name:'SQL query editor'});
+ await editor.fill('SELECT 101 AS first_tab');
+ await page.getByRole('button',{name:'New SQL tab'}).click();
+ await expect(page.getByRole('tab',{name:'Query 2'})).toHaveAttribute('aria-selected','true');
+ await editor.fill('SELECT 202 AS second_tab');
+ await page.getByRole('tab',{name:'Query 1'}).click();
+ await expect(editor).toHaveValue('SELECT 101 AS first_tab');
+ await page.getByRole('tab',{name:'Query 2'}).click();
+ await expect(editor).toHaveValue('SELECT 202 AS second_tab');
+ await page.getByRole('button',{name:'Close Query 2'}).click();
+ await expect(page.getByRole('tab',{name:'Query 2'})).toHaveCount(0);
+ await expect(editor).toHaveValue('SELECT 101 AS first_tab');
+ await page.reload();
+ await expect(editor).toHaveValue('SELECT 1 AS hello_world;');
+});
