@@ -87,6 +87,8 @@ jobs:
         env:
           API_TOKEN: "synthetic-api-token-at-least-32-chars-long"
           AUDIT_HMAC_KEY: "synthetic-audit-key-at-least-32-chars"
+          AUDIT_SINK_URL: "https://audit.example.org/ingest"
+          AUDIT_SINK_TOKEN: "synthetic-audit-sink-token-at-least-32-chars"
           VAULT_ACTIVE_KEY_B64: "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
           ADB_DATA_DIR: "/tmp/adb-data-ci"
           ADB_AUDIT_DIR: "/tmp/adb-audit-ci"
