@@ -7,6 +7,7 @@ async function signIn(page: import('@playwright/test').Page){
   await page.locator('#password').fill(password);
   await page.getByRole('button',{name:'Sign in',exact:true}).click();
   await expect(page.getByRole('heading',{name:'SQL Workspace'})).toBeVisible();
+  await expect(page.locator('.shell')).toHaveAttribute('data-hydrated','true');
 }
 
 test('sign-in screen exposes security details and a working password flow',async({page})=>{
