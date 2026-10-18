@@ -105,6 +105,15 @@ jobs:
 
   clickhouse-http:
     runs-on: ubuntu-latest
+    services:
+      clickhouse:
+        image: clickhouse/clickhouse-server:25.3
+        ports:
+          - 8123:8123
+        options: >-
+          --health-cmd "clickhouse-client --query 'SELECT 1'" --health-interval 10s --health-timeout 5s --health-retries 15
+    env:
+      TEST_CLICKHOUSE_HOST: 127.0.0.1
     defaults:
       run:
         working-directory: backend
@@ -116,6 +125,8 @@ jobs:
           cache: false
       - run: go mod download && go mod verify
       - run: go test -race ./internal/chhttp ./internal/server ./cmd/adbctl
+      - name: Test against live ClickHouse over verified test TLS
+        run: go test -race -run TestLiveClickHouseHTTPSProxy -count=1 -v ./internal/chhttp
       - run: go vet ./internal/chhttp ./internal/server ./cmd/adbctl
 
   sqlserver-integration:
