@@ -85,7 +85,7 @@ jobs:
         working-directory: frontend
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
       - name: Verify locked frontend dependency graph
@@ -98,7 +98,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
       - run: node --test mcp/server.test.mjs frontend/lib/totp.test.mjs frontend/lib/oidc.test.mjs deploy/qualification/check.test.mjs
@@ -181,7 +181,7 @@ jobs:
         with:
           go-version: '1.26.9'
           cache: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
       - name: Verify frozen browser test dependencies
