@@ -80,7 +80,7 @@ The Go API is internal to the Compose network, not published on a host port. The
 | SQLite | SQL queries, schema, table paging, exports and opt-in private snapshot | Live CI integration |
 | MariaDB | MySQL protocol adapter | Dedicated vendor tests pending |
 | CockroachDB | PostgreSQL protocol adapter | Dedicated vendor tests pending |
-| ClickHouse | Verified HTTPS, bounded read-only SQL and metadata | Protocol mock tests; live server pending |
+| ClickHouse 25.3 | Verified HTTPS adapter, bounded read-only SQL and metadata | Real ClickHouse 25.3 query/parameter integration via verified test HTTPS proxy; native production HTTPS still pending |
 | Redis 7.4 | Separate read-only RESP2 key inspector; SCAN, GET, TYPE, TTL, HGETALL, LRANGE | Live CI integration |
 | Microsoft SQL Server 2022 | SQL, metadata, bind parameters, dialect pagination | Live integration CI passed |
 | Oracle (TCPS) | SQL, metadata, Service Name/SID, bind parameters, Oracle paging | Driver/build tests passed; optional live Oracle test not run |
@@ -91,9 +91,9 @@ MongoDB similarly uses a separate document-inspection API, not SQL emulation. Bo
 
 Redis does **not** use SQL emulation or enable modifying commands. By default, Redis requires TLS; loopback plaintext requires an explicit server opt-in (`REDIS_ALLOW_PLAINTEXT_LOOPBACK=true`).
 
-SQL editor capabilities include bind parameters, EXPLAIN, saved browser-local SQL, JSON/CSV downloads and best-effort cancellation. SQL writes require the operator to enable the server policy and confirm each statement. Read-only accounts and a production identity system are still required.
+SQL editor capabilities include bind parameters, EXPLAIN, up to eight independent in-memory SQL tabs, explicit browser-local saved SQL, bounded JSON/CSV downloads, read-only CSV streaming up to 50,000 rows/32 MiB, and best-effort cancellation. SQL writes require the operator to enable the server policy and confirm each statement. Read-only accounts and a production identity system are still required.
 
-SQLite snapshot creation is **disabled by default**. To enable, configure an absolute, owner-private (0700) `SQLITE_BACKUP_DIR`; the server creates a bounded, temporary, session-owned backup using SQLite VACUUM INTO. Maximum 128 MiB, ten outstanding backups, 30-minute expiry. Restores are not implemented. See [Redis integration](docs/REDIS_INTEGRATION.md), [phase status](docs/PHASE_STATUS.md) and [security notes](docs/SECURITY.md).
+SQLite snapshot creation is **disabled by default**. To enable, configure an absolute, owner-private (0700) `SQLITE_BACKUP_DIR`; the server creates a bounded, temporary, session-owned backup using SQLite VACUUM INTO. Maximum 128 MiB, ten outstanding backups, 30-minute expiry. Restore is available through the **offline-only** SQLite validation/rollback CLI; HTTP restore remains disabled. See [Redis integration](docs/REDIS_INTEGRATION.md), [phase status](docs/PHASE_STATUS.md) and [security notes](docs/SECURITY.md).
 
 ## Go HTTP API
 
@@ -148,4 +148,7 @@ Select a table to inspect column types, primary keys, indexes, and preview rows 
 - [Enterprise release and recovery runbook](docs/PHASE6_RUNBOOK.md)
 
 ### Locked-down production profile
+The Go API also requires an explicit `DB_ENDPOINT_ALLOWLIST` of exact database host:port pairs with `ADB_PRODUCTION=true`. See [database egress policy](docs/EGRESS_POLICY.md). SQL text is lexed conservatively to reject several mutating forms, but database-level read-only accounts remain mandatory. See [SQL tab limits](docs/SQL_TABS.md) and [streamed CSV exports](docs/STREAMING_EXPORT.md).
+
+
 See [Production Deployment and Qualification](docs/PRODUCTION_DEPLOYMENT.md). `ADB_PRODUCTION=true` enables fail-closed Go/Next runtime policy checks and the [single-node production Compose example](deploy/compose.production.yml). The [manual production qualification workflow](.github/workflows/production-qualification.yml) requires independent evidence, active branch rules and successful exact-commit quality/security/release checks; it does **not** award a security certificate.

@@ -42,3 +42,6 @@ The evidence validator checks only structure, freshness and commit association; 
 - Independent security assessment, review approvals and an attested canary/rollback.
 
 See [Phase 6 Runbook](PHASE6_RUNBOOK.md), [Vault](CREDENTIAL_VAULT.md), [Observability](OBSERVABILITY.md) and [Release Provenance](RELEASE_PROVENANCE.md).
+
+## Approved database egress and streamed exports
+`ADB_PRODUCTION=true` requires `DB_ENDPOINT_ALLOWLIST` with exact, approved database host:port pairs (see [egress policy](EGRESS_POLICY.md)). Configure the same restrictions in the real deployment's firewall/VPC; source-only enforcement does not prevent DNS rebinding. Read-only export streaming is documented in [CSV export](STREAMING_EXPORT.md) and is bounded to 50,000 rows/32 MiB; it must still follow your data egress and retention policy.
