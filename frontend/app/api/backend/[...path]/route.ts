@@ -27,13 +27,14 @@ async function proxy(req:Request, {params}:{params:Promise<{path:string[]}>}):Pr
  if (input && input.length>1_000_000) return reply('Request too large',413);
  try {
   const scope=sessionScope((await cookies()).get(COOKIE_NAME)!.value,token);
-  const upstream=await fetch(`${base}${path}${new URL(req.url).search}`,{method:req.method,headers:{Authorization:`Bearer ${token}`,'X-ADB-Session-ID':scope.id,'X-ADB-Session-Proof':scope.proof,'X-ADB-Role':scope.role,'X-ADB-Role-Proof':scope.roleProof, ...(input?{'Content-Type':'application/json'}:{})},body:input,cache:'no-store',signal:AbortSignal.any([req.signal,AbortSignal.timeout(33000)])});
+  const isStreamPath=path.endsWith('/stream');
+  const upstream=await fetch(`${base}${path}${new URL(req.url).search}`,{method:req.method,headers:{Authorization:`Bearer ${token}`,'X-ADB-Session-ID':scope.id,'X-ADB-Session-Proof':scope.proof,'X-ADB-Role':scope.role,'X-ADB-Role-Proof':scope.roleProof, ...(input?{'Content-Type':'application/json'}:{})},body:input,cache:'no-store',signal:AbortSignal.any([req.signal,AbortSignal.timeout(isStreamPath?70000:33000)])});
   const format=new URL(req.url).searchParams.get('format');
   const isExport=path.endsWith('/export')&&upstream.ok;
   const isStream=path.endsWith('/stream')&&upstream.ok;
   const isCSV=isStream||(isExport&&format!=='json');
   const isBackup=/^\/v1\/backups\/[a-f0-9]{48}$/.test(path)&&req.method==='GET'&&upstream.ok;
-  return new Response(upstream.body,{status:upstream.status,headers:{'Content-Type':isBackup?'application/octet-stream':isCSV?'text/csv; charset=utf-8':'application/json','Cache-Control':'no-store',...(isExport||isStream?{'Content-Disposition':`attachment; filename="results.${isCSV?'csv':'json'}"`}:{}),...(isBackup?{'Content-Disposition':'attachment; filename="advance-db-snapshot.sqlite"'}:{})}});
+  return new Response(upstream.body,{status:upstream.status,headers:{'Content-Type':isBackup?'application/octet-stream':isCSV?'text/csv; charset=utf-8':'application/json','Cache-Control':'no-store',...(isExport||isStream?{'Content-Disposition':`attachment; filename="results.${isCSV?'csv':'json'}"`}:{}),...(isBackup?{'Content-Disposition':'attachment; filename="advance-db-snapshot.sqlite"'}:{}),...(isStream?{'X-ADB-Row-Cap':upstream.headers.get('X-ADB-Row-Cap')||'50000','X-ADB-Byte-Cap':upstream.headers.get('X-ADB-Byte-Cap')||'33554432'}:{})}});
  } catch {return reply('Database service unavailable',502)}
 }
 export {proxy as GET,proxy as POST,proxy as DELETE};
