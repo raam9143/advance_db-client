@@ -668,31 +668,6 @@ switch engine {
 }
 
 // ReadOnlySQL implements an intentionally conservative guard, not a full SQL parser. Database read-only roles are still required.
-func ReadOnlySQL(input string) bool {
-	s := strings.TrimSpace(input)
-	if s == "" {
-		return false
-	}
-	// Reject semicolons except a single terminator, line/block comments, and suspicious write keywords.
-	if strings.Contains(s, "--") || strings.Contains(s, "/*") || strings.Contains(s, "*/") {
-		return false
-	}
-	s = strings.TrimSpace(strings.TrimSuffix(s, ";"))
-	if strings.Contains(s, ";") {
-		return false
-	}
-	u := strings.ToUpper(s)
-	if !(strings.HasPrefix(u, "SELECT ") || strings.HasPrefix(u, "WITH ") || strings.HasPrefix(u, "EXPLAIN ") || strings.HasPrefix(u, "SHOW ")) {
-		return false
-	}
-	for _, k := range []string{" INSERT ", " UPDATE ", " DELETE ", " DROP ", " CREATE ", " ALTER ", " TRUNCATE ", " GRANT ", " REVOKE ", " COPY ", " INTO OUTFILE", " INTO ", " NEXT VALUE FOR ", " FOR UPDATE", " PG_SLEEP(", " LOAD_FILE(", " DML ", " CALL ", " EXEC ", " EXECUTE "} {
-		if strings.Contains(" "+u+" ", k) {
-			return false
-		}
-	}
-	return true
-}
-
 // checkQuotaLocked must only be called while holding s.mu.
 func(s *Server)checkQuotaLocked(owner string)bool{
  if len(s.dbs)>=24{return false}
