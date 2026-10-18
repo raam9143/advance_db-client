@@ -51,6 +51,7 @@ test('independent in-memory SQL tabs preserve each draft without storing it impl
  await page.locator('#password').fill(password);
  await page.getByRole('button',{name:/Sign in/i}).click();
  await expect(page.getByRole('heading',{name:'SQL Workspace'})).toBeVisible();
+ await expect(page.locator('.shell')).toHaveAttribute('data-hydrated','true');
  const editor=page.getByRole('textbox',{name:'SQL query editor'});
  await editor.fill('SELECT 101 AS first_tab');
  await page.getByRole('button',{name:'New SQL tab'}).click();
