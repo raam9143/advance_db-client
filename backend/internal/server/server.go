@@ -22,6 +22,7 @@ import (
 	"sync"
 	"time"
  "github.com/raam9143/advance_db-client/backend/internal/redisclient"
+ "github.com/raam9143/advance_db-client/backend/internal/vault"
  "github.com/raam9143/advance_db-client/backend/internal/sshtunnel"
  "github.com/raam9143/advance_db-client/backend/internal/mongoinspect"
  go_ora "github.com/sijms/go-ora/v2"
@@ -45,6 +46,7 @@ type ConnectionRequest struct {
 	ReadOnly bool   `json:"readOnly"`
  ServiceMode string `json:"serviceMode,omitempty"`
  Tunnel *sshtunnel.Config `json:"tunnel,omitempty"`
+ CredentialRef string `json:"credentialRef,omitempty"`
 }
 type PublicConnection struct {
 	ID       string `json:"id"`
@@ -221,7 +223,20 @@ func (s *Server) connect(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &c) {
 		return
 	}
-	c.Engine = strings.ToLower(strings.TrimSpace(c.Engine))
+	// Operator-encrypted profiles are read-only and admin-only by construction.
+ if c.CredentialRef!=""{
+  if requestRole(r)!="admin"{fail(w,403,"admin role required for stored credential profiles");return}
+  if c.Engine!=""||c.Host!=""||c.Port!=0||c.Database!=""||c.User!=""||c.Password!=""||c.SSLMode!=""||c.ServiceMode!=""||c.Tunnel!=nil{
+   fail(w,400,"credentialRef cannot be combined with inline connection fields");return
+  }
+  v,err:=vault.FromEnv()
+  if err!=nil{fail(w,503,"credential vault unavailable");return}
+  cred,err:=v.Get(c.CredentialRef)
+  if err!=nil{fail(w,400,"credential reference not found or unavailable");return}
+  c.Engine,c.Host,c.Port,c.Database,c.User,c.Password,c.SSLMode,c.ServiceMode=cred.Engine,cred.Host,cred.Port,cred.Database,cred.User,cred.Password,cred.SSLMode,cred.ServiceMode
+  c.ReadOnly=true
+ }
+ c.Engine = strings.ToLower(strings.TrimSpace(c.Engine))
  if requestRole(r)=="viewer"{c.ReadOnly=true}
  if c.Engine=="redis"{s.connectRedis(w,r,c);return}
  if c.Engine=="mongo"{s.connectMongo(w,r,c);return}
