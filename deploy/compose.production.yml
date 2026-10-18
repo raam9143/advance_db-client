@@ -27,6 +27,8 @@ services:
       SQLITE_ALLOWED_DIR: /data
       AUDIT_LOG_PATH: /var/lib/adb/audit/events.jsonl
       AUDIT_HMAC_KEY: ${AUDIT_HMAC_KEY:?Required audit key}
+      AUDIT_SINK_URL: ${AUDIT_SINK_URL:?Required off-host HTTPS audit endpoint}
+      AUDIT_SINK_TOKEN: ${AUDIT_SINK_TOKEN:?Required audit ingestion token}
       VAULT_FILE: /var/lib/adb/vault/profiles.enc
       VAULT_ACTIVE_KEY_B64: ${VAULT_ACTIVE_KEY_B64:?Required vault key}
       ALLOW_WRITE_QUERIES: "false"

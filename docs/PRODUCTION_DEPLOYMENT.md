@@ -45,3 +45,6 @@ See [Phase 6 Runbook](PHASE6_RUNBOOK.md), [Vault](CREDENTIAL_VAULT.md), [Observa
 
 ## Approved database egress and streamed exports
 `ADB_PRODUCTION=true` requires `DB_ENDPOINT_ALLOWLIST` with exact, approved database host:port pairs (see [egress policy](EGRESS_POLICY.md)). Configure the same restrictions in the real deployment's firewall/VPC; source-only enforcement does not prevent DNS rebinding. Read-only export streaming is documented in [CSV export](STREAMING_EXPORT.md) and is bounded to 50,000 rows/32 MiB; it must still follow your data egress and retention policy.
+
+## Off-host audit delivery
+The production backend now requires `AUDIT_SINK_URL` (HTTPS only, fixed path, no query/inline credentials) and a separate `AUDIT_SINK_TOKEN` of at least 32 characters. Each redacted HMAC-chained JSONL event is first synced locally and then synchronously POSTed to the external sink. A 200/201/204 response acknowledges delivery; failed deliveries fail closed. Provision an immutable, access-controlled ingestion backend with client authentication, idempotency by event MAC and durable acknowledgement semantics. The source repository does not host that service and cannot prove off-host immutability, retention, or successful recovery. Tests use an in-process TLS receiver only.
