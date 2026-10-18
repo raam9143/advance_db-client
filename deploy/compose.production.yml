@@ -1,0 +1,78 @@
+# Production deployment reference ONLY. Real TLS reverse proxy, egress policy,
+# secret manager, Redis, KMS, monitoring and evidence sign-off are external.
+services:
+  api:
+    build:
+      context: ../backend
+    restart: unless-stopped
+    read_only: true
+    user: "65532:65532"
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 128
+    mem_limit: 768m
+    cpus: 1.5
+    tmpfs:
+      - /tmp:uid=65532,gid=65532,mode=0700,size=64m
+    volumes:
+      - "${ADB_DATA_DIR:?Data directory required}:/data:ro"
+      - "${ADB_AUDIT_DIR:?Private audit directory required}:/var/lib/adb/audit:rw"
+      - "${ADB_VAULT_DIR:?Private vault directory required}:/var/lib/adb/vault:ro"
+    environment:
+      ADB_PRODUCTION: "true"
+      API_LISTEN: 0.0.0.0:8080
+      API_TOKEN: ${API_TOKEN:?Provision secret API token outside Compose}
+      SQLITE_ALLOWED_DIR: /data
+      AUDIT_LOG_PATH: /var/lib/adb/audit/events.jsonl
+      AUDIT_HMAC_KEY: ${AUDIT_HMAC_KEY:?Required audit key}
+      VAULT_FILE: /var/lib/adb/vault/profiles.enc
+      VAULT_ACTIVE_KEY_B64: ${VAULT_ACTIVE_KEY_B64:?Required vault key}
+      ALLOW_WRITE_QUERIES: "false"
+      MONGO_ALLOW_PLAINTEXT_LOOPBACK: "false"
+      REDIS_ALLOW_PLAINTEXT_LOOPBACK: "false"
+      SQLSERVER_ALLOW_UNVERIFIED_LOOPBACK: "false"
+      AI_ASSIST_ENABLED: "false"
+    networks: [internal]
+  web:
+    build:
+      context: ../frontend
+    restart: unless-stopped
+    read_only: true
+    user: "65532:65532"
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 128
+    mem_limit: 768m
+    cpus: 1.5
+    tmpfs:
+      - /tmp:uid=65532,gid=65532,mode=0700,size=64m
+      - /app/.next/cache:uid=65532,gid=65532,mode=0700,size=128m
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      ADB_PRODUCTION: "true"
+      APP_SESSION_SECRET: ${APP_SESSION_SECRET:?Required cookie key}
+      API_TOKEN: ${API_TOKEN:?Required API token}
+      GO_API_URL: http://api:8080
+      APP_PUBLIC_ORIGIN: ${APP_PUBLIC_ORIGIN:?Exact HTTPS public origin required}
+      OIDC_REQUIRED: "true"
+      OIDC_ISSUER: ${OIDC_ISSUER:?Required issuer}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:?Required client ID}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
+      OIDC_REDIRECT_URI: ${OIDC_REDIRECT_URI:?Required exact callback}
+      OIDC_ADMIN_GROUP: ${OIDC_ADMIN_GROUP:?Required admin group}
+      OIDC_VIEWER_GROUP: ${OIDC_VIEWER_GROUP:?Required viewer group}
+      OIDC_REQUIRED_AMR: ${OIDC_REQUIRED_AMR:?MFA method evidence required}
+      SESSION_REDIS_REQUIRED: "true"
+      SESSION_REDIS_URL: ${SESSION_REDIS_URL:?TLS Redis URL required}
+      SESSION_REDIS_ALLOW_PLAINTEXT_LOOPBACK: "false"
+      AI_ASSIST_ENABLED: "false"
+    depends_on: [api]
+    networks: [internal]
+networks:
+  internal:
+    driver: bridge
+# Egress filtering MUST be implemented by the deployment network/firewall.
+# Never publish the Go API. Never expose port 3000 without trusted HTTPS proxy.
