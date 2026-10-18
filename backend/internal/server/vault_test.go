@@ -9,6 +9,7 @@ import(
  "strings"
  "testing"
  "github.com/raam9143/advance_db-client/backend/internal/vault"
+ _ "modernc.org/sqlite"
 )
 func TestVaultProfileConnectionAndRBAC(t *testing.T){
  root:=t.TempDir();if err:=os.Chmod(root,0700);err!=nil{t.Fatal(err)}
