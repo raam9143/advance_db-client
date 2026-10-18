@@ -4,3 +4,7 @@ export function sessionActive(cookie:string|undefined):Promise<boolean>;
 export function revokeSession(cookie:string|undefined):Promise<boolean>;
 export function consumeOTP(secret:string,otp:string):Promise<boolean>;
 export function closeSessionStore():Promise<void>;
+
+export function loginAllowed():Promise<boolean>;
+export function recordLoginFailure():Promise<number>;
+export function clearLoginFailures():Promise<void>;
