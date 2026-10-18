@@ -22,6 +22,7 @@ services:
     environment:
       ADB_PRODUCTION: "true"
       API_LISTEN: 0.0.0.0:8080
+      DB_ENDPOINT_ALLOWLIST: ${DB_ENDPOINT_ALLOWLIST:?Approved host-port list required}
       API_TOKEN: ${API_TOKEN:?Provision secret API token outside Compose}
       SQLITE_ALLOWED_DIR: /data
       AUDIT_LOG_PATH: /var/lib/adb/audit/events.jsonl

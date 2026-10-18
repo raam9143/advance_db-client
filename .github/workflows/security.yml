@@ -91,6 +91,7 @@ jobs:
           ADB_DATA_DIR: "/tmp/adb-data-ci"
           ADB_AUDIT_DIR: "/tmp/adb-audit-ci"
           ADB_VAULT_DIR: "/tmp/adb-vault-ci"
+          DB_ENDPOINT_ALLOWLIST: "db.example.org:5432"
           APP_SESSION_SECRET: "synthetic-session-secret-at-least-32-chars"
           APP_PUBLIC_ORIGIN: "https://db.example.org"
           OIDC_ISSUER: "https://sso.example.org"

@@ -3,6 +3,7 @@ package prodcheck
 
 import(
  "encoding/base64"
+ "github.com/raam9143/advance_db-client/backend/internal/egress"
  "errors"
  "fmt"
  "net/url"
@@ -15,6 +16,7 @@ func Validate(get func(string)string)error{
  require:=func(k string){if get(k)==""{errorsList=append(errorsList,k+" required")}}
  require("API_TOKEN");require("AUDIT_LOG_PATH");require("AUDIT_HMAC_KEY")
  require("VAULT_FILE");require("VAULT_ACTIVE_KEY_B64")
+ if err:=egress.ValidateList(get("DB_ENDPOINT_ALLOWLIST"));err!=nil{errorsList=append(errorsList,err.Error())}
  token:=get("API_TOKEN")
  if len(token)<32{errorsList=append(errorsList,"API_TOKEN must be at least 32 characters")}
  if token!=""&&strings.Trim(token,string(token[0]))==""{errorsList=append(errorsList,"API_TOKEN cannot be a repeated character")}

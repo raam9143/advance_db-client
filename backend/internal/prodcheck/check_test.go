@@ -11,6 +11,7 @@ func secureEnv()map[string]string{
   "AUDIT_LOG_PATH":"/var/lib/adb/audit.log",
   "AUDIT_HMAC_KEY":"0123456789abcdefghijklmnopqrstuvwxyz",
   "VAULT_FILE":"/var/lib/adb/vault/profiles.enc",
+  "DB_ENDPOINT_ALLOWLIST":"db.example.com:5432",
   "VAULT_ACTIVE_KEY_B64":base64.StdEncoding.EncodeToString([]byte("0123456789abcdef0123456789abcdef")),
  }
 }

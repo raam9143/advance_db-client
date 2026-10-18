@@ -23,6 +23,7 @@ import (
  "sync/atomic"
 	"time"
  "github.com/raam9143/advance_db-client/backend/internal/redisclient"
+ "github.com/raam9143/advance_db-client/backend/internal/egress"
  "github.com/raam9143/advance_db-client/backend/internal/vault"
  "github.com/raam9143/advance_db-client/backend/internal/sshtunnel"
  "github.com/raam9143/advance_db-client/backend/internal/mongoinspect"
@@ -244,6 +245,7 @@ func (s *Server) connect(w http.ResponseWriter, r *http.Request) {
   c.ReadOnly=true
  }
  c.Engine = strings.ToLower(strings.TrimSpace(c.Engine))
+ if c.Engine!="sqlite"&&!egress.Allowed(c.Host,c.Port){fail(w,403,"database endpoint not permitted by production egress policy");return}
  if requestRole(r)=="viewer"{c.ReadOnly=true}
  if c.Engine=="redis"{s.connectRedis(w,r,c);return}
  if c.Engine=="mongo"{s.connectMongo(w,r,c);return}
