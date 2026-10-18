@@ -35,7 +35,7 @@ func runDatabase(t *testing.T,c server.ConnectionRequest){
  t.Cleanup(func(){call(t,h,"POST",path+"/query",server.QueryRequest{SQL:"DROP TABLE IF EXISTS "+table,ConfirmWrite:true})})
  code,data=call(t,h,"GET",path+"/schema",nil);check(t,code,data,200)
  if !bytes.Contains(data,[]byte(table)){t.Fatalf("schema missing table: %s",data)}
- schema:=c.Database;if c.Engine=="sqlite"{schema="main"};if c.Engine=="postgres"{schema="public"}
+ schema:=c.Database;if c.Engine=="sqlite"{schema="main"};if c.Engine=="postgres"||c.Engine=="cockroach"{schema="public"}
  q:="?schema="+schema+"&table="+table
  code,data=call(t,h,"GET",path+"/describe"+q,nil);check(t,code,data,200)
  var d server.TableDescription;if err:=json.Unmarshal(data,&d);err!=nil{t.Fatal(err)}
@@ -66,4 +66,18 @@ func TestEngineAlias(t *testing.T){
   driver,_,err:=server.ConfigDSN(server.ConnectionRequest{Name:"engine-test",Engine:tc.engine,Host:"localhost",Port:5432,Database:"adb",User:"x",Password:"secret",SSLMode:map[string]string{"cockroach":"disable","mariadb":"false"}[tc.engine]})
   if err!=nil||driver!=tc.want{t.Fatal(fmt.Sprint(tc,driver,err))}
  }
+}
+
+// Future-version compatibility tests run only against disposable CI databases.
+// A version becoming available does not imply production support until this
+// suite and an explicit reviewed driver update have succeeded.
+func TestMariaDBLive(t *testing.T){
+ host:=os.Getenv("TEST_MARIADB_HOST")
+ if host==""{t.Skip("requires disposable MariaDB host")}
+ runDatabase(t,server.ConnectionRequest{Name:"mariadb-compat",Engine:"mariadb",Host:host,Port:3306,User:"adb",Password:"adbtest",Database:"adb",SSLMode:"false"})
+}
+func TestCockroachLive(t *testing.T){
+ host:=os.Getenv("TEST_COCKROACH_HOST")
+ if host==""{t.Skip("requires disposable CockroachDB host")}
+ runDatabase(t,server.ConnectionRequest{Name:"cockroach-compat",Engine:"cockroach",Host:host,Port:26257,User:"root",Database:"defaultdb",SSLMode:"disable"})
 }

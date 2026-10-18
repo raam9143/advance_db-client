@@ -1,0 +1,161 @@
+# Independent forward-compatibility canary. This job follows *rolling* upstream
+# images and never changes production images or claims vendor certification.
+# Failures remain visible; fixed-version quality gates stay authoritative.
+name: database-forward-compatibility
+on:
+  schedule:
+    - cron: '17 3 * * 0'
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/database-forward-compatibility.yml'
+      - 'backend/go.mod'
+      - 'backend/go.sum'
+      - 'backend/integration/**'
+      - 'backend/internal/chhttp/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: db-forward-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  future-database:
+    name: ${{ matrix.engine }} (${{ matrix.image }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        include:
+          - engine: postgres
+            image: postgres:latest
+          - engine: mysql
+            image: mysql:latest
+          - engine: mariadb
+            image: mariadb:lts
+          - engine: cockroach
+            image: cockroachdb/cockroach:latest
+          - engine: mongo
+            image: mongo:latest
+          - engine: redis
+            image: redis:latest
+          - engine: clickhouse
+            image: clickhouse/clickhouse-server:latest
+          - engine: sqlserver
+            image: mcr.microsoft.com/mssql/server:2025-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.9'
+          cache: false
+      - name: Start isolated rolling database
+        env:
+          ENGINE: ${{ matrix.engine }}
+          IMAGE: ${{ matrix.image }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$ENGINE" in
+            postgres)
+              docker run -d --name compat-db -p 127.0.0.1:5432:5432 \
+                -e POSTGRES_USER=adb -e POSTGRES_PASSWORD=adbtest -e POSTGRES_DB=adb "$IMAGE" ;;
+            mysql)
+              docker run -d --name compat-db -p 127.0.0.1:3306:3306 \
+                -e MYSQL_ROOT_PASSWORD=ci-only-root -e MYSQL_DATABASE=adb \
+                -e MYSQL_USER=adb -e MYSQL_PASSWORD=adbtest "$IMAGE" ;;
+            mariadb)
+              docker run -d --name compat-db -p 127.0.0.1:3306:3306 \
+                -e MARIADB_ROOT_PASSWORD=ci-only-root -e MARIADB_DATABASE=adb \
+                -e MARIADB_USER=adb -e MARIADB_PASSWORD=adbtest "$IMAGE" ;;
+            cockroach)
+              docker run -d --name compat-db --network host "$IMAGE" \
+                start-single-node --insecure --listen-addr=127.0.0.1:26257 --http-addr=127.0.0.1:8080 ;;
+            mongo)
+              docker run -d --name compat-db -p 127.0.0.1:27017:27017 "$IMAGE" ;;
+            redis)
+              docker run -d --name compat-db -p 127.0.0.1:6379:6379 "$IMAGE" ;;
+            clickhouse)
+              docker run -d --name compat-db -p 127.0.0.1:8123:8123 \
+                -e CLICKHOUSE_USER=adb -e CLICKHOUSE_PASSWORD=adbtest \
+                -e CLICKHOUSE_DB=default "$IMAGE" ;;
+            sqlserver)
+              docker run -d --name compat-db -p 127.0.0.1:1433:1433 \
+                -e ACCEPT_EULA=Y -e 'MSSQL_SA_PASSWORD=Test_0nly_Str0ng_2026!' "$IMAGE" ;;
+            *) echo 'unknown test engine' >&2; exit 1 ;;
+          esac
+          docker image inspect --format='Image digest: {{join .RepoDigests ", "}}' "$IMAGE"
+      - name: Wait for server readiness
+        env:
+          ENGINE: ${{ matrix.engine }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ready=0
+          for attempt in $(seq 1 60); do
+            if [[ "$(docker inspect --format '{{.State.Running}}' compat-db)" != "true" ]]; then
+              echo "Database container terminated during startup" >&2
+              docker logs --tail 100 compat-db
+              exit 1
+            fi
+            case "$ENGINE" in
+              postgres) docker exec compat-db pg_isready -U adb -d adb >/dev/null 2>&1 && ready=1 ;;
+              mysql) docker exec compat-db mysqladmin ping -h 127.0.0.1 -u root -pci-only-root >/dev/null 2>&1 && ready=1 ;;
+              mariadb) docker exec compat-db mariadb-admin ping -h 127.0.0.1 -u root -pci-only-root >/dev/null 2>&1 && ready=1 ;;
+              cockroach) docker exec compat-db /cockroach/cockroach sql --insecure --host=127.0.0.1:26257 -e 'SELECT 1' >/dev/null 2>&1 && ready=1 ;;
+              mongo) docker exec compat-db mongosh --quiet --eval "db.adminCommand('ping').ok" >/dev/null 2>&1 && ready=1 ;;
+              redis) docker exec compat-db redis-cli ping >/dev/null 2>&1 && ready=1 ;;
+              clickhouse) docker exec compat-db clickhouse-client --user adb --password adbtest --query 'SELECT 1' >/dev/null 2>&1 && ready=1 ;;
+              sqlserver) docker exec compat-db /bin/bash -c 'echo > /dev/tcp/127.0.0.1/1433' >/dev/null 2>&1 && ready=1 ;;
+            esac
+            if [[ "$ready" == "1" ]]; then break; fi
+            sleep 5
+          done
+          if [[ "$ready" != "1" ]]; then
+            docker logs --tail 100 compat-db
+            echo "Rolling image did not become ready" >&2
+            exit 1
+          fi
+          if [[ "$ENGINE" == "sqlserver" ]]; then sleep 8; fi
+      - name: Verify pinned driver graph
+        run: go mod download && go mod verify && go mod tidy -diff
+      - name: Test live driver compatibility
+        shell: bash
+        env:
+          ENGINE: ${{ matrix.engine }}
+          TEST_POSTGRES_HOST: 127.0.0.1
+          TEST_MYSQL_HOST: 127.0.0.1
+          TEST_MARIADB_HOST: 127.0.0.1
+          TEST_COCKROACH_HOST: 127.0.0.1
+          TEST_MONGO_HOST: 127.0.0.1
+          TEST_REDIS_HOST: 127.0.0.1
+          TEST_CLICKHOUSE_HOST: 127.0.0.1
+          TEST_MSSQL_HOST: 127.0.0.1
+          TEST_MSSQL_PASSWORD: 'Test_0nly_Str0ng_2026!'
+        run: |
+          set -euo pipefail
+          # Each matrix job runs just its engine's disposable live integration test.
+          case "$ENGINE" in
+            postgres) go test -race -count=1 -run '^TestPostgres$' ./integration ;;
+            mysql) go test -race -count=1 -run '^TestMySQL$' ./integration ;;
+            mariadb) go test -race -count=1 -run '^TestMariaDBLive$' ./integration ;;
+            cockroach) go test -race -count=1 -run '^TestCockroachLive$' ./integration ;;
+            mongo) go test -race -count=1 -run '^TestMongoLiveReadonly$' ./integration ;;
+            redis) go test -race -count=1 -run '^TestRedisLiveReadOnly$' ./integration ;;
+            clickhouse) go test -race -count=1 -run '^TestLiveClickHouseHTTPSProxy$' ./internal/chhttp ;;
+            sqlserver) go test -race -count=1 -run '^TestSQLServerLive$' ./integration ;;
+            *) echo 'unsupported test engine' >&2; exit 1 ;;
+          esac
+      - name: Capture failing server logs
+        if: failure()
+        run: docker logs --tail 200 compat-db || true
+      - name: Remove test container
+        if: always()
+        run: docker rm -f compat-db || true

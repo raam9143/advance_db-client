@@ -1,0 +1,50 @@
+# Automatic upgrade proposals. Never auto-merge DB drivers or major versions:
+# every PR must pass security and live integration workflows and be reviewed.
+version: 2
+updates:
+  - package-ecosystem: "gomod"
+    directory: "/backend"
+    schedule:
+      interval: "daily"
+      time: "04:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 15
+    commit-message:
+      prefix: "deps(go)"
+    # Individual PRs isolate regressions across pgx, MySQL, SQL Server,
+    # Oracle, MongoDB, and SQLite drivers, including major upgrades.
+
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:30"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "deps(web)"
+
+  - package-ecosystem: "docker"
+    directories:
+      - "/backend"
+      - "/frontend"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "04:30"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "deps(image)"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+      time: "04:30"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "deps(ci)"
