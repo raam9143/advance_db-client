@@ -14,13 +14,16 @@ func Validate(get func(string)string)error{
  if get("ADB_PRODUCTION")!="true"{return nil}
  errorsList:=[]string{}
  require:=func(k string){if get(k)==""{errorsList=append(errorsList,k+" required")}}
- require("API_TOKEN");require("AUDIT_LOG_PATH");require("AUDIT_HMAC_KEY")
+ require("API_TOKEN");require("AUDIT_LOG_PATH");require("AUDIT_HMAC_KEY");require("AUDIT_SINK_URL");require("AUDIT_SINK_TOKEN")
  require("VAULT_FILE");require("VAULT_ACTIVE_KEY_B64")
  if err:=egress.ValidateList(get("DB_ENDPOINT_ALLOWLIST"));err!=nil{errorsList=append(errorsList,err.Error())}
  token:=get("API_TOKEN")
  if len(token)<32{errorsList=append(errorsList,"API_TOKEN must be at least 32 characters")}
  if token!=""&&strings.Trim(token,string(token[0]))==""{errorsList=append(errorsList,"API_TOKEN cannot be a repeated character")}
  if len(get("AUDIT_HMAC_KEY"))<32{errorsList=append(errorsList,"AUDIT_HMAC_KEY must be at least 32 characters")}
+ if len(get("AUDIT_SINK_TOKEN"))<32{errorsList=append(errorsList,"AUDIT_SINK_TOKEN must be at least 32 characters")}
+ sink,err:=url.Parse(get("AUDIT_SINK_URL"))
+ if err!=nil||sink.Scheme!="https"||sink.Hostname()==""||sink.User!=nil||sink.RawQuery!=""||sink.Fragment!=""{errorsList=append(errorsList,"AUDIT_SINK_URL must be HTTPS without inline credentials")}
  key,err:=base64.StdEncoding.Strict().DecodeString(get("VAULT_ACTIVE_KEY_B64"))
  if err!=nil||len(key)!=32{errorsList=append(errorsList,"VAULT_ACTIVE_KEY_B64 must encode exactly 32 random bytes")}
  for _,name:=range []string{"MONGO_ALLOW_PLAINTEXT_LOOPBACK","REDIS_ALLOW_PLAINTEXT_LOOPBACK","SQLSERVER_ALLOW_UNVERIFIED_LOOPBACK","ALLOW_WRITE_QUERIES"}{

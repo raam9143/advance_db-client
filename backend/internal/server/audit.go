@@ -2,6 +2,8 @@ package server
 
 import(
  "bufio"
+ "bytes"
+ "context"
  "crypto/hmac"
  "crypto/sha256"
  "encoding/hex"
@@ -9,6 +11,7 @@ import(
  "errors"
  "io"
  "net/http"
+ "net/url"
  "os"
  "path/filepath"
  "strings"
@@ -31,6 +34,9 @@ type auditLog struct{
  key []byte
  previous string
  mu sync.Mutex
+ sinkURL string
+ sinkToken string
+ sinkClient *http.Client
 }
 type auditResponseWriter struct{http.ResponseWriter;status int}
 func(w *auditResponseWriter)WriteHeader(code int){w.status=code;w.ResponseWriter.WriteHeader(code)}
@@ -63,6 +69,14 @@ func openAuditLog()(*auditLog,error){
  // Only one process may write a hash chain. Multiple writers would corrupt ordering.
  if err=syscall.Flock(int(file.Fd()),syscall.LOCK_EX|syscall.LOCK_NB);err!=nil{_ =file.Close();return nil,errors.New("audit log already owned by another process")}
  a:=&auditLog{file:file,key:[]byte(key)}
+ if target:=os.Getenv("AUDIT_SINK_URL");target!=""{
+  u,err:=url.Parse(target)
+  if err!=nil||u.Scheme!="https"||u.Hostname()==""||u.User!=nil||u.RawQuery!=""||u.Fragment!=""{_ =file.Close();return nil,errors.New("audit sink must be a fixed HTTPS endpoint without credentials or query")}
+  token:=os.Getenv("AUDIT_SINK_TOKEN")
+  if len(token)<32{_ =file.Close();return nil,errors.New("audit sink token is missing or too short")}
+  a.sinkURL=target;a.sinkToken=token
+  a.sinkClient=&http.Client{Timeout:4*time.Second,CheckRedirect:func(*http.Request,[]*http.Request)error{return http.ErrUseLastResponse}}
+ }
  if err=a.checkExisting();err!=nil{_ =file.Close();return nil,err}
  return a,nil
 }
@@ -99,6 +113,17 @@ func(a *auditLog)Append(method,path,owner,event string,status int)error{
  b=append(b,'\n')
  if _,err=a.file.Write(b);err!=nil{return err}
  if err=a.file.Sync();err!=nil{return err}
+ if a.sinkURL!=""{
+  ctx,cancel:=context.WithTimeout(context.Background(),4*time.Second)
+  req,err:=http.NewRequestWithContext(ctx,"POST",a.sinkURL,bytes.NewReader(b))
+  if err!=nil{cancel();return errors.New("audit sink request failed")}
+  req.Header.Set("Content-Type","application/json")
+  req.Header.Set("Authorization","Bearer "+a.sinkToken)
+  response,err:=a.sinkClient.Do(req)
+  if err!=nil{cancel();return errors.New("audit sink unavailable")}
+  response.Body.Close();cancel()
+  if response.StatusCode!=200&&response.StatusCode!=201&&response.StatusCode!=204{return errors.New("audit sink rejected event")}
+ }
  a.previous=e.MAC
  return nil
 }

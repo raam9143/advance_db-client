@@ -10,6 +10,8 @@ func secureEnv()map[string]string{
   "API_TOKEN":"abcdefghijklmnopqrstuvwxyz0123456789",
   "AUDIT_LOG_PATH":"/var/lib/adb/audit.log",
   "AUDIT_HMAC_KEY":"0123456789abcdefghijklmnopqrstuvwxyz",
+  "AUDIT_SINK_URL":"https://audit.example.org/ingest",
+  "AUDIT_SINK_TOKEN":"audit_sink_token_with_at_least_32_chars",
   "VAULT_FILE":"/var/lib/adb/vault/profiles.enc",
   "DB_ENDPOINT_ALLOWLIST":"db.example.com:5432",
   "VAULT_ACTIVE_KEY_B64":base64.StdEncoding.EncodeToString([]byte("0123456789abcdef0123456789abcdef")),
