@@ -26,6 +26,7 @@ func ReadOnlySQL(input string) bool {
  for i,t:=range tokens {
   if prohibitedWord(t){return false}
   if t=="FOR"&&i+1<len(tokens)&&tokens[i+1]=="UPDATE"{return false}
+  if t=="NEXT"&&i+2<len(tokens)&&tokens[i+1]=="VALUE"&&tokens[i+2]=="FOR"{return false}
   if t=="LOCK"&&i+1<len(tokens){return false}
  }
  return true
@@ -43,7 +44,7 @@ func prohibitedWord(token string)bool{
   "LOAD_FILE","PG_READ_FILE","PG_SLEEP","SLEEP","BENCHMARK",
   "NEXTVAL","SETVAL","DBLINK_EXEC","PG_ADVISORY_LOCK","PG_ADVISORY_XACT_LOCK",
   "LO_EXPORT","SYS_EVAL","XP_CMDSHELL","UTL_HTTP","DBMS_SCHEDULER",
-  "GET_LOCK","RELEASE_LOCK","IS_FREE_LOCK","NEXT","VALUE","FOR",
+  "GET_LOCK","RELEASE_LOCK","IS_FREE_LOCK",
   "HANDLER","INSTALL","UNINSTALL","INFILE","BULK":return true
  }
  return strings.HasPrefix(token,"DBMS_")||strings.HasPrefix(token,"UTL_")||strings.HasPrefix(token,"XP_")
