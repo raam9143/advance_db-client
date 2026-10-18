@@ -48,3 +48,6 @@ Use [Credential Vault](CREDENTIAL_VAULT.md) to provision AES-GCM profiles via st
 
 ## Prometheus monitoring
 An admin-only `/v1/metrics/prometheus` endpoint and [alert rules](../deploy/monitoring/alerts.yml) have been added. These are in-process counters and are not a deployed Prometheus/Alertmanager stack. Verify scrape authorization, alert delivery and SLO calculations in the actual environment before release.
+
+## Enforced production startup policy and manual evidence gate
+See [Production Deployment](PRODUCTION_DEPLOYMENT.md) for the `ADB_PRODUCTION=true` fail-closed startup checks, strict OIDC MFA claims, pinned audit writer, non-root Compose sample, and manual evidence-gated production qualification. These automated controls do not replace independent security certification or organization-specific regulator/auditor approval.

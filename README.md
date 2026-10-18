@@ -146,3 +146,6 @@ Select a table to inspect column types, primary keys, indexes, and preview rows 
 - [Encrypted credentials and key rotation](docs/CREDENTIAL_VAULT.md)
 - [Prometheus metrics and SLO alert rules](docs/OBSERVABILITY.md)
 - [Enterprise release and recovery runbook](docs/PHASE6_RUNBOOK.md)
+
+### Locked-down production profile
+See [Production Deployment and Qualification](docs/PRODUCTION_DEPLOYMENT.md). `ADB_PRODUCTION=true` enables fail-closed Go/Next runtime policy checks and the [single-node production Compose example](deploy/compose.production.yml). The [manual production qualification workflow](.github/workflows/production-qualification.yml) requires independent evidence, active branch rules and successful exact-commit quality/security/release checks; it does **not** award a security certificate.
