@@ -15,6 +15,7 @@ test('responsive visual review captures and horizontal-overflow guard',async({pa
   await page.locator('#password').fill(process.env.APP_PASSWORD!);
   await page.getByRole('button',{name:'Sign in',exact:true}).click();
   await expect(page.getByRole('heading',{name:'SQL Workspace'})).toBeVisible();
+  await expect(page.locator('.shell')).toHaveAttribute('data-hydrated','true');
   for(const [label,width,height] of [
     ['desktop',1440,900],['tablet',768,1024],
     ['mobile',375,812],['small-mobile',320,800]
@@ -22,6 +23,7 @@ test('responsive visual review captures and horizontal-overflow guard',async({pa
     await page.setViewportSize({width,height});
     await page.reload();
     await expect(page.getByRole('heading',{name:'SQL Workspace'})).toBeVisible();
+  await expect(page.locator('.shell')).toHaveAttribute('data-hydrated','true');
     await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth)).toBeLessThanOrEqual(2);
     await page.screenshot({path:folder+'/workspace-'+label+'.png',fullPage:true,animations:'disabled'});
   }
