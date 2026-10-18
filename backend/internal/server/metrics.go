@@ -13,6 +13,7 @@ type apiMetrics struct{
  total uint64
  byClass [5]uint64
  latency [5]uint64
+ durationSum float64
 }
 type metricsResponseWriter struct{http.ResponseWriter;status int}
 func(w *metricsResponseWriter)WriteHeader(code int){w.status=code;w.ResponseWriter.WriteHeader(code)}
@@ -26,6 +27,7 @@ type metricsSnapshot struct{
 func(m *apiMetrics)observe(status int,elapsed time.Duration){
  m.mu.Lock();defer m.mu.Unlock()
  m.total++
+ m.durationSum+=elapsed.Seconds()
  n:=status/100-1;if n<0||n>4{n=4}
  m.byClass[n]++
  switch{
@@ -52,7 +54,7 @@ func(m *apiMetrics)prometheus()string{
   fmt.Fprintf(&b,"adb_http_responses_total{status_class=%q} %d\n",class,snap.StatusClasses[class])
  }
  // Buckets are cumulative and have fixed labels to avoid high cardinality.
- m.mu.Lock();v:=m.latency;m.mu.Unlock()
+ m.mu.Lock();v:=m.latency;seconds:=m.durationSum;m.mu.Unlock()
  b.WriteString("# HELP adb_http_request_duration_seconds Request duration histogram\n# TYPE adb_http_request_duration_seconds histogram\n")
  sum:=uint64(0)
  for i,threshold:=range []string{"0.05","0.2","1","5","+Inf"}{
@@ -60,6 +62,7 @@ func(m *apiMetrics)prometheus()string{
   fmt.Fprintf(&b,"adb_http_request_duration_seconds_bucket{le=%q} %d\n",threshold,sum)
  }
  fmt.Fprintf(&b,"adb_http_request_duration_seconds_count %d\n",snap.Requests)
+ fmt.Fprintf(&b,"adb_http_request_duration_seconds_sum %.6f\n",seconds)
  fmt.Fprintf(&b,"# HELP adb_uptime_seconds Process uptime\n# TYPE adb_uptime_seconds gauge\nadb_uptime_seconds %d\n",snap.UptimeSeconds)
  return b.String()
 }
