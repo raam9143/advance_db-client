@@ -191,7 +191,7 @@ export default function Workspace(){
    const response=await fetch('/api/backend'+data.downloadPath,{cache:'no-store'});
    if(!response.ok)throw Error('Snapshot download failed');
    const blob=await response.blob(),url=URL.createObjectURL(blob);
-   const anchor=document.createElement('a');anchor.href=url;anchor.download='advance-db-snapshot.sqlite';anchor.click();URL.revokeObjectURL(url);
+   const anchor=document.createElement('a');anchor.href=url;anchor.download='croft-snapshot.sqlite';anchor.click();URL.revokeObjectURL(url);
   }catch(e){setError(e instanceof Error?e.message:'Snapshot failed')}
   finally{
    if(backupId){try{await api<void>(`/v1/backups/${backupId}`,'DELETE')}catch{/* expiry will clean it */}}
@@ -218,7 +218,7 @@ export default function Workspace(){
  {sidebar&&<button type="button" className="sidebar-scrim" aria-label="Close navigation" onClick={()=>setSidebar(false)}/>}
 
  <aside id="workspace-navigation" aria-label="Workspace navigation" className={`sidebar ${sidebar?'':'sidebar-collapsed'}`}>
-  <div className="sidebar-top"><span className="app-logo"><Database size={22}/></span><span className="brand-name">Advance<span>DB</span><small>DATA WORKSPACE</small></span><button className="icon-button collapse" aria-label="Collapse sidebar" onClick={()=>setSidebar(false)}><PanelLeftClose size={18}/></button></div>
+  <div className="sidebar-top"><img className="brand-mark" src="/brand/croft-mark-light.svg" alt="" width={36} height={36}/><span className="brand-name">Croft<small>DATABASE WORKSPACE</small></span><button className="icon-button collapse" aria-label="Collapse sidebar" onClick={()=>setSidebar(false)}><PanelLeftClose size={18}/></button></div>
   <div className="sidebar-section-head"><span>WORKSPACE</span><button className="icon-button" title="Add connection" onClick={showConnectionDialog}><Plus size={17}/></button></div>
   <nav className="side-nav" aria-label="Primary"><button type="button" className="nav-item current" aria-current="page" onClick={()=>{setTab('results');if(window.innerWidth<=960)setSidebar(false)}}><Layers size={17}/> SQL Workspace <span className="nav-tag">ACTIVE</span></button><button type="button" className="nav-item" onClick={()=>{setTab('history');if(window.innerWidth<=960)setSidebar(false)}}><Activity size={17}/> Query history <span className="nav-counter">{history.length}</span></button></nav>
   <div className="sidebar-section-head"><span>SAVED SQL <em>{savedQueries.length}</em></span></div><div className="saved-query-list">{savedQueries.length===0?<p className="sidebar-hint">Queries you save will appear here.</p>:savedQueries.map((q,i)=><button key={i} onClick={()=>{setQuery(q.sql);setTab('results');if(window.innerWidth<=960)setSidebar(false)}} title={q.name}><Code2 size={14}/><span>{q.name}</span></button>)}</div>

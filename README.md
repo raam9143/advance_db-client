@@ -1,6 +1,8 @@
-# Advance DB Client
+# Croft
 
-**Web-first database workspace · Go API · TypeScript · Node.js/Next.js**
+**A careful hold on every database.** Web-first database workspace · Go API · TypeScript · Node.js/Next.js
+
+The mark is in [`brand/`](brand/): `croft-icon.svg`, `croft-icon.png`, `croft-mark.svg`, `croft-mark-light.svg`, and the horizontal lockups. Runtime settings such as `ADB_PRODUCTION` are unchanged.
 
 A clean-room, incremental migration **foundation** inspired by [DBX](https://github.com/t8y2/dbx), not a finished or feature-equivalent port of DBX. This is a distinct codebase: the original Rust + Tauri backend, Vue desktop application, and 100+ engine integrations have **not** been automatically translated.
 

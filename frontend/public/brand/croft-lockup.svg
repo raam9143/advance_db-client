@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 220" role="img" aria-label="Croft, database workspace">
+  <rect width="760" height="220" fill="#f3f6fb"/>
+  <svg x="36" y="46" width="128" height="128" viewBox="0 0 64 64">
+    <rect width="64" height="64" rx="14" fill="#101d34"/>
+    <path fill="#ffffff" d="M16 19.2c0-1.8 1.4-3.2 3.2-3.2H44.8c1.8 0 3.2 1.4 3.2 3.2V23H16v-3.8zm0 3.8h7v25c0 1.8-1.4 3.2-3.2 3.2h-.6c-1.8 0-3.2-1.4-3.2-3.2V23zm25 0h7v25c0 1.8-1.4 3.2-3.2 3.2h-.6c-1.8 0-3.2-1.4-3.2-3.2V23z"/>
+    <rect x="29.2" y="29" width="5.6" height="10" rx="1.6" fill="#4a5edb"/>
+  </svg>
+  <text x="188" y="118" fill="#17243b" font-family="Liberation Sans, Arial, Helvetica, sans-serif" font-size="78" font-weight="700">Croft</text>
+  <text x="192" y="158" fill="#5a6880" font-family="Liberation Sans, Arial, Helvetica, sans-serif" font-size="16" letter-spacing="3.2">DATABASE WORKSPACE</text>
+</svg>

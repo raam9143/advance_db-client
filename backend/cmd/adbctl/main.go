@@ -1,4 +1,4 @@
-// Command adbctl is a conservative read-only CLI for Advance DB Client API.
+// Command adbctl is a conservative read-only CLI for the Croft API.
 package main
 import(
  "bytes"

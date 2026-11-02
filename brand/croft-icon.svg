@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Croft">
+  <rect width="64" height="64" rx="14" fill="#101d34"/>
+  <path fill="#ffffff" d="M16 19.2c0-1.8 1.4-3.2 3.2-3.2H44.8c1.8 0 3.2 1.4 3.2 3.2V23H16v-3.8zm0 3.8h7v25c0 1.8-1.4 3.2-3.2 3.2h-.6c-1.8 0-3.2-1.4-3.2-3.2V23zm25 0h7v25c0 1.8-1.4 3.2-3.2 3.2h-.6c-1.8 0-3.2-1.4-3.2-3.2V23z"/>
+  <rect x="29.2" y="29" width="5.6" height="10" rx="1.6" fill="#4a5edb"/>
+</svg>

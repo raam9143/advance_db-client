@@ -1,4 +1,4 @@
-/* Advance DB Client — unified, responsive design system.
+/* Croft — unified, responsive design system.
    Loaded AFTER legacy styles so existing API and workflow markup remain stable. */
 :root{
   color-scheme:light;
@@ -24,6 +24,8 @@ button:disabled{opacity:.54;box-shadow:none;cursor:not-allowed}
 .sidebar-collapsed{margin-left:-274px}
 .sidebar-top{height:86px;padding:19px 18px;border-bottom:1px solid #ffffff15;gap:12px}
 .app-logo{height:42px;width:42px;border-radius:13px;background:linear-gradient(145deg,#7689ff,#4653c5);box-shadow:0 8px 20px #1726a74a}
+.brand-mark{width:36px;height:36px;display:block;flex:none}
+.login-brand .brand-mark{width:44px;height:44px}
 .brand-name{font-size:19px;letter-spacing:-.7px}
 .brand-name span{color:#b7c2ff}
 .brand-name small{font-size:9px;letter-spacing:1.8px;margin-top:5px;color:#8295b7}

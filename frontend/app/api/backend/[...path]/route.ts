@@ -34,7 +34,7 @@ async function proxy(req:Request, {params}:{params:Promise<{path:string[]}>}):Pr
   const isStream=path.endsWith('/stream')&&upstream.ok;
   const isCSV=isStream||(isExport&&format!=='json');
   const isBackup=/^\/v1\/backups\/[a-f0-9]{48}$/.test(path)&&req.method==='GET'&&upstream.ok;
-  return new Response(upstream.body,{status:upstream.status,headers:{'Content-Type':isBackup?'application/octet-stream':isCSV?'text/csv; charset=utf-8':'application/json','Cache-Control':'no-store',...(isExport||isStream?{'Content-Disposition':`attachment; filename="results.${isCSV?'csv':'json'}"`}:{}),...(isBackup?{'Content-Disposition':'attachment; filename="advance-db-snapshot.sqlite"'}:{}),...(isStream?{'X-ADB-Row-Cap':upstream.headers.get('X-ADB-Row-Cap')||'50000','X-ADB-Byte-Cap':upstream.headers.get('X-ADB-Byte-Cap')||'33554432'}:{})}});
+  return new Response(upstream.body,{status:upstream.status,headers:{'Content-Type':isBackup?'application/octet-stream':isCSV?'text/csv; charset=utf-8':'application/json','Cache-Control':'no-store',...(isExport||isStream?{'Content-Disposition':`attachment; filename="results.${isCSV?'csv':'json'}"`}:{}),...(isBackup?{'Content-Disposition':'attachment; filename="croft-snapshot.sqlite"'}:{}),...(isStream?{'X-ADB-Row-Cap':upstream.headers.get('X-ADB-Row-Cap')||'50000','X-ADB-Byte-Cap':upstream.headers.get('X-ADB-Byte-Cap')||'33554432'}:{})}});
  } catch {return reply('Database service unavailable',502)}
 }
 export {proxy as GET,proxy as POST,proxy as DELETE};

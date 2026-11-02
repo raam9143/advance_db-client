@@ -1,4 +1,4 @@
-# DBX → Advance DB Client: staged migration plan
+# DBX → Croft: staged migration plan
 
 ## Upstream baseline
 

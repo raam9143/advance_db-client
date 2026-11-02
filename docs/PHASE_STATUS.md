@@ -1,4 +1,4 @@
-# Advance DB Client — migration status (17 October 2026)
+# Croft — migration status (17 October 2026)
 
 This is a web-first rewrite foundation, **not yet a complete port** of t8y2/dbx.
 

@@ -22,10 +22,10 @@ export default function Login(){
  }
 
  return <main className="login-bg">
-   <section className="login-showcase" aria-label="About Advance DB Client">
+   <section className="login-showcase" aria-label="About Croft">
      <div className="login-brand">
-       <span className="app-logo" aria-hidden="true"><Database size={24}/></span>
-       <span>Advance DB <small>DATA WORKSPACE</small></span>
+       <img className="brand-mark" src="/brand/croft-mark-light.svg" alt="" width={44} height={44}/>
+       <span>Croft <small>DATABASE WORKSPACE</small></span>
      </div>
      <div className="login-showcase-center">
        <div className="login-showcase-label">ONE WORKSPACE. MULTIPLE DATABASES.</div>
@@ -37,7 +37,7 @@ export default function Login(){
          <div className="login-feature"><ShieldCheck size={20}/><span>Read-only controls and session security</span></div>
        </div>
      </div>
-     <div className="login-showcase-foot">Advance DB Client · Secure database workspace</div>
+     <div className="login-showcase-foot">Croft · A careful hold on every database.</div>
    </section>
    <div className="login-form-area">
      <form className="login-card" onSubmit={submit} aria-labelledby="sign-in-title">
