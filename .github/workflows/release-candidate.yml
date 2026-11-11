@@ -43,7 +43,7 @@ jobs:
         run: |
           tar -czf dist/adb-frontend-standalone.tar.gz -C frontend .next/standalone .next/static package-lock.json
           (cd dist && sha256sum adb-api-linux-amd64 adb-api-linux-arm64 adb-frontend-standalone.tar.gz > SHA256SUMS)
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: advance-db-release-candidate
           path: dist/
