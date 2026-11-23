@@ -5,7 +5,7 @@ go 1.26.0
 require (
 	github.com/go-sql-driver/mysql v1.10.1
 	github.com/jackc/pgx/v5 v5.11.0
-	github.com/microsoft/go-mssqldb v1.11.2
+	github.com/microsoft/go-mssqldb v1.12.0
 	github.com/sijms/go-ora/v2 v2.9.0
 	go.mongodb.org/mongo-driver v1.17.10
 	golang.org/x/crypto v0.58.0
