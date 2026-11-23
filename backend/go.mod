@@ -3,7 +3,7 @@ module github.com/raam9143/advance_db-client/backend
 go 1.26.0
 
 require (
-	github.com/go-sql-driver/mysql v1.10.1
+	github.com/go-sql-driver/mysql v1.10.2
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/microsoft/go-mssqldb v1.11.2
 	github.com/sijms/go-ora/v2 v2.9.0
